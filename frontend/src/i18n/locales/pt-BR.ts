@@ -25,6 +25,31 @@ const overrides: LocaleTree = {
       description: 'Crie sua conta e teste o acesso unificado à IA',
       button: 'Cadastrar grátis'
     },
+    // Route-Cortexx Nova Home Page
+    title: 'Route-Cortexx | Distribuição Inteligente de APIs',
+    explorePackages: 'Explorar Pacotes',
+    routeYourApi: 'Roteiize Sua API Através do Cortexx',
+    distributeAndManage: 'Distribua, gerencie e monetize sua cota de API de IA com precisão. Roteiize solicitações inteligentemente entre múltiplos provedores com um gateway unificado.',
+    powerfulFeatures: 'Recursos Poderosos',
+    featuresSubtitle: 'Tudo o que você precisa para gerenciar cotas de API em escala',
+    unifiedGateway: 'Gateway Unificado',
+    unifiedGatewayDesc: 'Roteiize solicitações para qualquer provedor de IA através de um único ponto de acesso unificado',
+    smartDistribution: 'Distribuição Inteligente',
+    smartDistributionDesc: 'Distribua inteligentemente solicitações entre contas com sessões persistentes e failover automático',
+    realtimeAnalytics: 'Análise em Tempo Real',
+    realtimeAnalyticsDesc: 'Acompanhe o uso, custos e cotas em tempo real com relatórios de faturamento detalhados',
+    chooseYourPlan: 'Escolha Seu Plano',
+    flexiblePackages: 'Pacotes flexíveis adaptados às suas necessidades',
+    supportedProviders: 'Provedores Suportados',
+    connectWithFavorite: 'Conecte-se com seus provedores de IA favoritos',
+    // Estado vazio para nenhum plano
+    noPlansDraft: 'Pronto para criar?',
+    noPlansDescription: 'Nenhum plano de assinatura criado ainda. Comece adicionando seu primeiro pacote para começar a oferecer serviços aos seus usuários.',
+    createFirstPlan: 'Criar Primeiro Plano',
+    tipsTitle: '💡 Dicas Rápidas',
+    tip1: 'Pacotes definem suas ofertas de serviços e preços',
+    tip2: 'Cada plano pode suportar múltiplos provedores de IA',
+    tip3: 'Defina limites de taxa personalizados e cotas de uso',
     footer: {
       allRightsReserved: 'Todos os direitos reservados.'
     }
@@ -750,6 +775,11 @@ const overrides: LocaleTree = {
     paymentAmount: 'Valor do pagamento',
     paymentMethod: 'Método de pagamento',
     payNow: 'Pagar agora',
+    ciabra: {
+      documentLabel: 'CPF ou CNPJ',
+      documentPlaceholder: '000.000.000-00',
+      documentHint: 'Necessário para emitir a cobrança PIX via Ciabra Invoice.'
+    },
     orders: {
       title: 'Pedidos',
       orderNo: 'Pedido',

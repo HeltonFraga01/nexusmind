@@ -59,6 +59,16 @@ describe('getVisibleMethods', () => {
     expect(visible.alipay.single_min).toBe(2)
     expect(visible.wxpay.fee_rate).toBe(1.2)
   })
+
+  it('normalizes ciabra provider alias as a visible method', () => {
+    const visible = getVisibleMethods({
+      ciabra: methodLimit({ single_min: 15, fee_rate: 1.5 }),
+    })
+
+    expect(visible).toEqual({
+      ciabra: methodLimit({ single_min: 15, fee_rate: 1.5 }),
+    })
+  })
 })
 
 describe('decidePaymentLaunch', () => {

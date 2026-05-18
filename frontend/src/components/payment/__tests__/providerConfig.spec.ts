@@ -41,12 +41,13 @@ describe('PROVIDER_CONFIG_FIELDS.airwallex', () => {
   })
 })
 
-describe('PROVIDER_CONFIG_FIELDS.stripe', () => {
-  it('adds currency config with CNY as the default', () => {
-    const currency = findField('stripe', 'currency')
+describe('PROVIDER_CONFIG_FIELDS.ciabra', () => {
+  it('uses BRL as default currency and keeps BRL selectable', () => {
+    const currency = findField('ciabra', 'currency')
 
-    expect(currency?.defaultValue).toBe('CNY')
+    expect(currency?.defaultValue).toBe('BRL')
     expect(currency?.hintKey).toBe('admin.settings.payment.field_paymentCurrencyHint')
     expect(currency?.options).toBe(PAYMENT_CURRENCY_OPTIONS)
+    expect(PAYMENT_CURRENCY_OPTIONS.some(option => option.value === 'BRL')).toBe(true)
   })
 })

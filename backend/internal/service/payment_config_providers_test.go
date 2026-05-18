@@ -52,6 +52,13 @@ func TestValidateProviderRequest(t *testing.T) {
 			wantErr:        false,
 		},
 		{
+			name:           "valid ciabra provider",
+			providerKey:    payment.TypeCiabra,
+			providerName:   "Ciabra Provider",
+			supportedTypes: payment.TypeCiabra,
+			wantErr:        false,
+		},
+		{
 			name:           "valid alipay provider",
 			providerKey:    "alipay",
 			providerName:   "Alipay Direct",

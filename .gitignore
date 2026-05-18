@@ -111,6 +111,10 @@ backend/data/
 backend/config.yaml
 deploy/config.yaml
 backend/.installed
+# root-level runtime files (created by the server on first run)
+.installed
+config.yaml
+data/
 
 # ===================
 # 其他

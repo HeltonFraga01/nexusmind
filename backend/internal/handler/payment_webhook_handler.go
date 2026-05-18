@@ -67,6 +67,12 @@ func (h *PaymentWebhookHandler) AirwallexWebhook(c *gin.Context) {
 	h.handleNotify(c, payment.TypeAirwallex)
 }
 
+// CiabraWebhook handles Ciabra webhook events.
+// POST /api/v1/payment/webhook/ciabra
+func (h *PaymentWebhookHandler) CiabraWebhook(c *gin.Context) {
+	h.handleNotify(c, payment.TypeCiabra)
+}
+
 // handleNotify is the shared logic for all provider webhook handlers.
 func (h *PaymentWebhookHandler) handleNotify(c *gin.Context, providerKey string) {
 	var rawBody string
@@ -163,6 +169,33 @@ func extractOutTradeNo(rawBody, providerKey string) string {
 		}
 		if err := json.Unmarshal([]byte(rawBody), &payload); err == nil {
 			return strings.TrimSpace(payload.Data.Object.MerchantOrderID)
+		}
+	case payment.TypeCiabra:
+		var payload struct {
+			ExternalID string `json:"externalId"`
+			Invoice    struct {
+				ExternalID string `json:"externalId"`
+			} `json:"invoice"`
+			Data struct {
+				ExternalID string `json:"externalId"`
+				Invoice    struct {
+					ExternalID string `json:"externalId"`
+				} `json:"invoice"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(rawBody), &payload); err == nil {
+			if id := strings.TrimSpace(payload.ExternalID); id != "" {
+				return id
+			}
+			if id := strings.TrimSpace(payload.Invoice.ExternalID); id != "" {
+				return id
+			}
+			if id := strings.TrimSpace(payload.Data.ExternalID); id != "" {
+				return id
+			}
+			if id := strings.TrimSpace(payload.Data.Invoice.ExternalID); id != "" {
+				return id
+			}
 		}
 	}
 	// For other providers (Stripe, Alipay direct, WxPay direct), the registry

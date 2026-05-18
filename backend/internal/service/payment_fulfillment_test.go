@@ -411,6 +411,30 @@ func TestValidateProviderNotificationMetadataRejectsStripeCurrencyMismatch(t *te
 	assert.ErrorContains(t, err, "stripe currency mismatch")
 }
 
+func TestValidateProviderNotificationMetadataRejectsCiabraSnapshotMismatch(t *testing.T) {
+	t.Parallel()
+
+	order := &dbent.PaymentOrder{
+		PaymentType: payment.TypeCiabra,
+		ProviderSnapshot: map[string]any{
+			"schema_version": 2,
+			"currency":       "BRL",
+		},
+	}
+
+	err := validateProviderNotificationMetadata(order, payment.TypeCiabra, map[string]string{
+		"currency": "USD",
+		"status":   "PAID",
+	})
+	assert.ErrorContains(t, err, "ciabra currency mismatch")
+
+	err = validateProviderNotificationMetadata(order, payment.TypeCiabra, map[string]string{
+		"currency": "BRL",
+		"status":   "PENDING",
+	})
+	assert.ErrorContains(t, err, "ciabra status mismatch")
+}
+
 func TestPaymentAmountToleranceForThreeDecimalCurrency(t *testing.T) {
 	t.Parallel()
 

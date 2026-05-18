@@ -12,7 +12,9 @@
 
 ARG ALPINE_IMAGE=alpine:3.21
 ARG POSTGRES_IMAGE=postgres:18-alpine
-ARG TARGETARCH=arm64
+# Declared without default so BuildKit injects the correct per-platform value
+# (amd64 or arm64) during multi-platform builds via `docker buildx --platform`.
+ARG TARGETARCH
 
 FROM ${POSTGRES_IMAGE} AS pg-client
 
@@ -22,7 +24,9 @@ LABEL maintainer="Cortexx"
 LABEL description="Sub2API - Cortexx localized runtime build"
 LABEL org.opencontainers.image.source="https://github.com/HeltonFraga01/sub2api-cortexx"
 
-ARG TARGETARCH
+# Redeclare in stage; default arm64 is used only for plain `docker build`
+# without --platform (local dev convenience).
+ARG TARGETARCH=arm64
 
 RUN apk add --no-cache \
     ca-certificates \

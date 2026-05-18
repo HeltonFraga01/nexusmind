@@ -22,9 +22,9 @@ export const paymentAPI = {
     return apiClient.get<PaymentConfig>('/payment/config')
   },
 
-  /** Get available subscription plans */
+  /** Get available subscription plans (public endpoint for landing/home usage) */
   getPlans() {
-    return apiClient.get<SubscriptionPlan[]>('/payment/plans')
+    return apiClient.get<SubscriptionPlan[]>('/payment/public/plans')
   },
 
   /** Get available payment channels */

@@ -1,0 +1,188 @@
+# ============================================================================
+# Sub2API / Route-Cortexx - Swarm stack (Portainer reference + route.cortexx.online)
+# ============================================================================
+# Referência de padrão: stack existente "cortexx-app" no Portainer
+# - network_public externa
+# - labels Traefik em deploy.labels
+# - certresolver letsencryptresolver
+#
+# Deploy:
+#   docker stack deploy -c deploy/stack.swarm.route.cortexx.online.yml sub2api-route
+# ============================================================================
+
+services:
+  postgres:
+    image: "${POSTGRES_IMAGE:-postgres:18-alpine}"
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+      POSTGRES_USER: "${POSTGRES_USER:-sub2api}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      POSTGRES_DB: "${POSTGRES_DB:-sub2api}"
+      TZ: "${TZ:-America/Sao_Paulo}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sub2api-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sub2api} -d ${POSTGRES_DB:-sub2api}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 20
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: stop-first
+
+  redis:
+    image: "${REDIS_IMAGE:-redis:8-alpine}"
+    environment:
+      TZ: "${TZ:-America/Sao_Paulo}"
+      REDISCLI_AUTH: "${REDIS_PASSWORD:-}"
+    command:
+      - sh
+      - -ec
+      - |
+        if [ -n "$REDIS_PASSWORD" ]; then
+          exec redis-server --save 60 1 --appendonly yes --appendfsync everysec --requirepass "$REDIS_PASSWORD"
+        else
+          exec redis-server --save 60 1 --appendonly yes --appendfsync everysec
+        fi
+    volumes:
+      - redis_data:/data
+    networks:
+      - sub2api-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 20
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: stop-first
+
+  sub2api:
+    image: "${SUB2API_IMAGE:?set SUB2API_IMAGE}"
+    environment:
+      AUTO_SETUP: "true"
+
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "8080"
+      SERVER_MODE: "${SERVER_MODE:-release}"
+      RUN_MODE: "${RUN_MODE:-standard}"
+      TZ: "${TZ:-America/Sao_Paulo}"
+
+      DATABASE_HOST: sub2api-route_postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: "${POSTGRES_USER:-sub2api}"
+      DATABASE_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      DATABASE_DBNAME: "${POSTGRES_DB:-sub2api}"
+      DATABASE_SSLMODE: "${DATABASE_SSLMODE:-disable}"
+
+      REDIS_HOST: sub2api-route_redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_DB: "${REDIS_DB:-0}"
+      REDIS_POOL_SIZE: "${REDIS_POOL_SIZE:-1024}"
+      REDIS_MIN_IDLE_CONNS: "${REDIS_MIN_IDLE_CONNS:-10}"
+      REDIS_ENABLE_TLS: "${REDIS_ENABLE_TLS:-false}"
+
+      ADMIN_EMAIL: "${ADMIN_EMAIL:?ADMIN_EMAIL is required}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}"
+
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      JWT_EXPIRE_HOUR: "${JWT_EXPIRE_HOUR:-24}"
+      TOTP_ENCRYPTION_KEY: "${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required}"
+
+      # Ajustado para domínio público
+      WEBHOOK_BASE_URL: "${WEBHOOK_BASE_URL:-https://route.cortexx.online}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-https://route.cortexx.online}"
+
+    volumes:
+      - sub2api_data:/app/data
+    networks:
+      - sub2api-internal
+      - network_public
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 30
+        window: 180s
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_NETWORK:-network_public}
+        - traefik.http.routers.sub2api-route.rule=Host(`route.cortexx.online`)
+        - traefik.http.routers.sub2api-route.entrypoints=websecure
+        - traefik.http.routers.sub2api-route.tls=true
+        - traefik.http.routers.sub2api-route.tls.certresolver=letsencryptresolver
+        - traefik.http.services.sub2api-route.loadbalancer.server.port=8080
+        - traefik.http.services.sub2api-route.loadbalancer.healthcheck.path=/health
+        - traefik.http.services.sub2api-route.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.sub2api-route.loadbalancer.healthcheck.timeout=10s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  sub2api_data:
+    driver: local
+
+networks:
+  sub2api-internal:
+    driver: overlay
+    attachable: true
+  network_public:
+    external: true
+    name: ${TRAEFIK_NETWORK:-network_public}

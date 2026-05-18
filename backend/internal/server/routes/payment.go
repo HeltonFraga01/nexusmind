@@ -49,6 +49,7 @@ func RegisterPaymentRoutes(
 	// persisted-state compatibility path for staggered upgrades.
 	public := v1.Group("/payment/public")
 	{
+		public.GET("/plans", paymentHandler.GetPlans)
 		public.POST("/orders/verify", paymentHandler.VerifyOrderPublic)
 		public.POST("/orders/resolve", paymentHandler.ResolveOrderPublicByResumeToken)
 	}
@@ -63,6 +64,7 @@ func RegisterPaymentRoutes(
 		webhook.POST("/wxpay", webhookHandler.WxpayNotify)
 		webhook.POST("/stripe", webhookHandler.StripeWebhook)
 		webhook.POST("/airwallex", webhookHandler.AirwallexWebhook)
+		webhook.POST("/ciabra", webhookHandler.CiabraWebhook)
 	}
 
 	// --- Admin payment endpoints (admin auth) ---

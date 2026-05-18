@@ -300,6 +300,9 @@ func buildPaymentOrderProviderSnapshot(sel *payment.InstanceSelection, req Creat
 		}
 		snapshot["currency"] = paymentProviderConfigCurrency(providerKey, sel.Config)
 	}
+	if providerKey == payment.TypeCiabra {
+		snapshot["currency"] = paymentProviderConfigCurrency(providerKey, sel.Config)
+	}
 
 	if len(snapshot) == 1 {
 		return nil
@@ -435,12 +438,15 @@ func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.Paymen
 		return nil, err
 	}
 	providerReq := buildProviderCreatePaymentRequest(CreateOrderRequest{
-		PaymentType: req.PaymentType,
-		OpenID:      req.OpenID,
-		ClientIP:    req.ClientIP,
-		IsMobile:    req.IsMobile,
-		ReturnURL:   providerReturnURL,
+		PaymentType:      req.PaymentType,
+		OpenID:           req.OpenID,
+		ClientIP:         req.ClientIP,
+		IsMobile:         req.IsMobile,
+		ReturnURL:        providerReturnURL,
+		CustomerDocument: req.CustomerDocument,
 	}, sel, outTradeNo, payAmountStr, subject)
+	providerReq.CustomerEmail = strings.TrimSpace(order.UserEmail)
+	providerReq.CustomerName = deriveCustomerNameFromEmail(providerReq.CustomerEmail)
 	pr, err := prov.CreatePayment(ctx, providerReq)
 	if err != nil {
 		slog.Error("[PaymentService] CreatePayment failed", "provider", sel.ProviderKey, "instance", sel.InstanceID, "error", err)
@@ -487,7 +493,31 @@ func buildProviderCreatePaymentRequest(req CreateOrderRequest, sel *payment.Inst
 		ClientIP:           req.ClientIP,
 		IsMobile:           req.IsMobile,
 		InstanceSubMethods: selectedInstanceSupportedTypes(sel),
+		CustomerDocument:   strings.TrimSpace(req.CustomerDocument),
 	}
+}
+
+// deriveCustomerNameFromEmail returns a human-readable display name from an
+// email address. Providers that bill named customers (Ciabra) need at least
+// three characters; we fall back to a generic label when the email local part
+// is too short or missing.
+func deriveCustomerNameFromEmail(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "Route-Cortexx Customer"
+	}
+	local := email
+	if at := strings.Index(local, "@"); at > 0 {
+		local = local[:at]
+	}
+	local = strings.ReplaceAll(local, ".", " ")
+	local = strings.ReplaceAll(local, "_", " ")
+	local = strings.ReplaceAll(local, "-", " ")
+	local = strings.TrimSpace(local)
+	if len([]rune(local)) < 3 {
+		return "Route-Cortexx Customer"
+	}
+	return local
 }
 
 func selectedInstanceSupportedTypes(sel *payment.InstanceSelection) string {
@@ -502,7 +532,7 @@ func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limit
 		if plan.ProductName != "" {
 			return plan.ProductName
 		}
-		return "Sub2API Subscription " + plan.Name
+		return "Route-Cortexx Subscription " + plan.Name
 	}
 	currency := payment.DefaultPaymentCurrency
 	if sel != nil {
@@ -514,7 +544,7 @@ func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limit
 	if pf != "" || sf != "" {
 		return strings.TrimSpace(pf + " " + amountStr + " " + sf)
 	}
-	return "Sub2API " + amountStr + " " + currency
+	return "Route-Cortexx " + amountStr + " " + currency
 }
 
 func (s *PaymentService) maybeBuildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
