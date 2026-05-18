@@ -106,8 +106,9 @@ Imagem publicada em: `docker.io/heltonfraga/sub2api-cortexx`
 
 | Versão | Commit | Descrição |
 |--------|--------|-----------|
+| 0.1.128 | 965f5c9b | Patch CVEs: otel 1.37→1.43, Alpine 3.21→3.23 |
 | 0.1.127 | 81c4cda2 | Home v2 + branding + Ciabra PIX + pt-BR |
-| 0.1.126 | — | Versão anterior |
+| 0.1.126 | — | Versão anterior (upstream) |
 
 ### Deploy no servidor (via Portainer)
 
