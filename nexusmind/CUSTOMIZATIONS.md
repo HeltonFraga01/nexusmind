@@ -102,7 +102,13 @@ docker buildx build --platform linux/arm64,linux/amd64 \
 O `Dockerfile` do upstream **não é editado** — ele já fixa `pnpm@9` (build
 determinístico). A imagem é nomeada pela flag `-t`, não pelo Dockerfile.
 
-Deploy em Swarm: ver [`nexusmind/deploy/`](deploy/).
+Deploy em Swarm ([`nexusmind/deploy/`](deploy/)):
+- `stack.swarm.yml` — baseline genérico (porta publicada direta).
+- `stack.swarm.nexusmind.digital.yml` — produção em **nexusmind.digital**
+  (Traefik + Let's Encrypt). Deployar como stack `nexusmind`.
+
+Domínio de produção: **https://nexusmind.digital** (deployment próprio,
+independente de route.cortexx.online).
 
 ## Atualizar do upstream
 
