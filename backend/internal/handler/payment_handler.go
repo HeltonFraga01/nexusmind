@@ -268,8 +268,8 @@ func (h *PaymentHandler) CreateOrder(c *gin.Context) {
 		PaymentSource:   req.PaymentSource,
 		OrderType:       req.OrderType,
 		PlanID:          req.PlanID,
-		// nexusmind
-		CustomerDocument: strings.TrimSpace(req.CustomerDocument),
+		Locale:          c.GetHeader("Accept-Language"),
+		CustomerDocument: strings.TrimSpace(req.CustomerDocument), // nexusmind
 	})
 	if err != nil {
 		response.ErrorFrom(c, err)
