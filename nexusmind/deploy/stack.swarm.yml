@@ -1,0 +1,225 @@
+# ============================================================================
+# NexusMind — Docker Swarm stack (production-oriented baseline)
+# ============================================================================
+# Uso:
+#   export $(grep -v '^#' .env.swarm | xargs)
+#   docker stack deploy -c nexusmind/deploy/stack.swarm.yml nexusmind
+#
+# IMPORTANTE:
+# - Este stack assume nó stateful fixo (SWARM_STATEFUL_NODE) para evitar drift
+#   de volumes locais entre nós no Swarm.
+# - Preencha TODAS as variáveis obrigatórias antes do deploy (ver stack.swarm.env.example).
+# - Em Swarm, depends_on é ignorado; usamos restart_policy + healthcheck.
+# ============================================================================
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18-alpine}
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_USER: ${POSTGRES_USER:-nexusmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-nexusmind}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nexusmind-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexusmind} -d ${POSTGRES_DB:-nexusmind}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 20
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: stop-first
+      resources:
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+        limits:
+          cpus: "2.00"
+          memory: 2G
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:8-alpine}
+    environment:
+      TZ: ${TZ:-UTC}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-}
+    command:
+      - sh
+      - -c
+      - |
+        redis-server \
+          --save 60 1 \
+          --appendonly yes \
+          --appendfsync everysec \
+          ${REDIS_PASSWORD:+--requirepass "$REDIS_PASSWORD"}
+    volumes:
+      - redis_data:/data
+    networks:
+      - nexusmind-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 20
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: stop-first
+      resources:
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+        limits:
+          cpus: "1.00"
+          memory: 1G
+
+  nexusmind:
+    image: "${NEXUSMIND_IMAGE:?set NEXUSMIND_IMAGE}"
+    environment:
+      # Setup automático (primeiro boot)
+      AUTO_SETUP: "true"
+
+      # Server
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "8080"
+      SERVER_MODE: ${SERVER_MODE:-release}
+      RUN_MODE: ${RUN_MODE:-standard}
+      TZ: ${TZ:-UTC}
+
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: ${POSTGRES_USER:-nexusmind}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DATABASE_DBNAME: ${POSTGRES_DB:-nexusmind}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-disable}
+      DATABASE_MAX_OPEN_CONNS: ${DATABASE_MAX_OPEN_CONNS:-80}
+      DATABASE_MAX_IDLE_CONNS: ${DATABASE_MAX_IDLE_CONNS:-20}
+      DATABASE_CONN_MAX_LIFETIME_MINUTES: ${DATABASE_CONN_MAX_LIFETIME_MINUTES:-30}
+      DATABASE_CONN_MAX_IDLE_TIME_MINUTES: ${DATABASE_CONN_MAX_IDLE_TIME_MINUTES:-5}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_POOL_SIZE: ${REDIS_POOL_SIZE:-1024}
+      REDIS_MIN_IDLE_CONNS: ${REDIS_MIN_IDLE_CONNS:-10}
+      REDIS_ENABLE_TLS: ${REDIS_ENABLE_TLS:-false}
+
+      # Admin bootstrap
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+
+      # Segurança (NÃO deixar aleatório em produção)
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRE_HOUR: ${JWT_EXPIRE_HOUR:-24}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required}
+
+      # OAuth opcionais
+      GEMINI_OAUTH_CLIENT_ID: ${GEMINI_OAUTH_CLIENT_ID:-}
+      GEMINI_OAUTH_CLIENT_SECRET: ${GEMINI_OAUTH_CLIENT_SECRET:-}
+      GEMINI_OAUTH_SCOPES: ${GEMINI_OAUTH_SCOPES:-}
+      GEMINI_QUOTA_POLICY: ${GEMINI_QUOTA_POLICY:-}
+      GEMINI_CLI_OAUTH_CLIENT_SECRET: ${GEMINI_CLI_OAUTH_CLIENT_SECRET:-}
+      ANTIGRAVITY_OAUTH_CLIENT_SECRET: ${ANTIGRAVITY_OAUTH_CLIENT_SECRET:-}
+      ANTIGRAVITY_USER_AGENT_VERSION: ${ANTIGRAVITY_USER_AGENT_VERSION:-}
+
+      # Security URL allowlist
+      SECURITY_URL_ALLOWLIST_ENABLED: ${SECURITY_URL_ALLOWLIST_ENABLED:-false}
+      SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: ${SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP:-false}
+      SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: ${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-false}
+      SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS: ${SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS:-}
+    volumes:
+      - nexusmind_data:/app/data
+    networks:
+      - nexusmind-internal
+    ports:
+      - target: 8080
+        published: ${SERVER_PUBLISHED_PORT:-8080}
+        protocol: tcp
+        mode: ingress
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 30
+        window: 180s
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      resources:
+        reservations:
+          cpus: "0.50"
+          memory: 512M
+        limits:
+          cpus: "4.00"
+          memory: 4G
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  nexusmind_data:
+    driver: local
+
+networks:
+  nexusmind-internal:
+    driver: overlay
+    attachable: true
+
+# -----------------------------------------------------------------------------
+# Opcional (Traefik): conecte o serviço nexusmind a uma overlay externa
+# (ex.: docker network create -d overlay network_public) e adicione labels Traefik.
+# -----------------------------------------------------------------------------
