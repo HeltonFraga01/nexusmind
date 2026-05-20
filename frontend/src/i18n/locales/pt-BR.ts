@@ -1552,6 +1552,8 @@ const overrides: LocaleTree = {
         "webSearchEmulationGlobalDisabled": "Ative a opção global primeiro em Configurações → Gateway → Emulação de pesquisa na Web",
         "codexImageGenerationBridge": "Ponte de geração de imagem Codex",
         "codexImageGenerationBridgeHint": "Quando ativado, as solicitações de texto Codex /responses em grupos OpenAI podem receber automaticamente a ferramenta image_generation. Mantenha desativado, a menos que as contas roteadas suportem a geração de imagens.",
+        "bedrockCCCompat": "Compatibilidade Bedrock CC", // nexusmind v0.1.129
+        "bedrockCCCompatHint": "⚠️ Quando ativado, as requisições para contas Bedrock neste canal serão transformadas para compatibilidade com Claude Code (conversão de tipo thinking, sanitização de ID tool_use).", // nexusmind v0.1.129
         "basicSettings": "Configurações básicas",
         "addPlatform": "Adicionar plataforma",
         "noPlatforms": "Clique em \"Adicionar plataforma\" para começar a configurar o canal",
@@ -3033,6 +3035,22 @@ const overrides: LocaleTree = {
       },
       "userPrefix": "Usuário #{id}",
       "exportCsv": "Exportar CSV",
+      "batchUpdate": "Atualização em Lote", // nexusmind v0.1.129
+      "batchUpdateTitle": "Atualização em Lote de Códigos", // nexusmind v0.1.129
+      "selectedCount": "{count} código(s) selecionado(s)", // nexusmind v0.1.129
+      "clearSelection": "Limpar seleção", // nexusmind v0.1.129
+      "selectCodesFirst": "Selecione os códigos primeiro", // nexusmind v0.1.129
+      "noBatchFieldsSelected": "Selecione ao menos um campo para atualizar", // nexusmind v0.1.129
+      "batchUpdateSuccess": "{count} código(s) atualizado(s) com sucesso", // nexusmind v0.1.129
+      "failedToBatchUpdate": "Falha na atualização em lote dos códigos", // nexusmind v0.1.129
+      "batchFields": { // nexusmind v0.1.129
+        "status": "Status",
+        "expiresAt": "Expira Em",
+        "notes": "Observações",
+        "group": "Grupo"
+      },
+      "batchNotesPlaceholder": "Digite a nova observação, ou deixe em branco para limpar", // nexusmind v0.1.129
+      "clearGroup": "Limpar grupo", // nexusmind v0.1.129
       "deleteAllUnused": "Excluir todos os códigos não utilizados",
       "deleteCode": "Excluir código de resgate",
       "deleteCodeConfirm": "Tem certeza de que deseja excluir este código de resgate? Esta ação não pode ser desfeita.",
@@ -3667,7 +3685,10 @@ const overrides: LocaleTree = {
         "rewriteMessageCacheControlHint": "Padrão desativado: preserva o cache_control do cliente nos blocos de conteúdo da mensagem. Quando ativado, os pontos de interrupção do cliente são removidos e os pontos de interrupção do proxy são injetados para clientes que não gerenciam o cache por conta própria.",
         "antigravityUserAgentVersion": "Versão UA antigravidade",
         "antigravityUserAgentVersionPlaceholder": "1.23.2",
-        "antigravityUserAgentVersionHint": "Deixe em branco para usar ANTIGRAVITY_USER_AGENT_VERSION ou o padrão integrado 1.23.2; quando definida, a configuração do administrador tem precedência."
+        "antigravityUserAgentVersionHint": "Deixe em branco para usar ANTIGRAVITY_USER_AGENT_VERSION ou o padrão integrado 1.23.2; quando definida, a configuração do administrador tem precedência.",
+        "openaiCodexUserAgent": "OpenAI Codex UA", // nexusmind v0.1.129
+        "openaiCodexUserAgentPlaceholder": "codex-tui/0.125.0 (Ubuntu 22.4.0; x86_64) xterm-256color (codex-tui; 0.125.0)", // nexusmind v0.1.129
+        "openaiCodexUserAgentHint": "Usado para contornar desafios de UA de browser do Cloudflare no upstream OpenAI. Aplica-se apenas quando o User-Agent do cliente é detectado como browser (Mozilla/...). Deixe em branco para usar o padrão interno." // nexusmind v0.1.129
       },
       "webSearchEmulation": {
         "title": "Emulação de pesquisa na Web",
@@ -4021,6 +4042,36 @@ const overrides: LocaleTree = {
         "sendTestEmail": "Enviar e-mail de teste",
         "sending": "Enviando...",
         "enterRecipientHint": "Insira um endereço de e-mail do destinatário"
+      },
+      "emailTemplates": { // nexusmind v0.1.129
+        "title": "Modelos de Email",
+        "description": "Personalize assuntos e conteúdo HTML dos emails de notificação por evento e idioma.",
+        "event": "Evento",
+        "locale": "Idioma",
+        "localeEn": "Inglês",
+        "localeZh": "Chinês",
+        "subject": "Assunto",
+        "subjectPlaceholder": "Digite o assunto do email",
+        "html": "Modelo HTML",
+        "htmlPlaceholder": "Edite o modelo HTML do email",
+        "placeholders": "Variáveis Disponíveis",
+        "placeholdersHelp": "Clique em uma variável para copiá-la. O backend substitui esses valores ao enviar os emails.",
+        "livePreview": "Pré-visualização ao Vivo",
+        "previewSecurityHint": "O HTML de pré-visualização é gerado pelo endpoint de preview do backend e exibido em um iframe sandbox com scripts desabilitados.",
+        "preview": "Pré-visualizar / Atualizar",
+        "previewing": "Pré-visualizando...",
+        "save": "Salvar Modelo",
+        "saving": "Salvando...",
+        "restoreOfficial": "Restaurar Oficial",
+        "restoring": "Restaurando...",
+        "restoreConfirm": "Restaurar o modelo oficial para este evento e idioma? Sua versão personalizada será substituída.",
+        "restoreSuccess": "Modelo oficial restaurado",
+        "saveSuccess": "Modelo de email salvo",
+        "placeholderCopied": "Variável copiada",
+        "validationRequired": "Assunto e modelo HTML são obrigatórios",
+        "empty": "Nenhum evento ou idioma de modelo de email disponível ainda.",
+        "noPreview": "Atualize a pré-visualização para ver o assunto do email renderizado.",
+        "customized": "Personalizado"
       },
       "opsMonitoring": {
         "title": "Monitoramento de operações",
@@ -5979,18 +6030,22 @@ const overrides: LocaleTree = {
     "dateRangeToday": "Hoje",
     "dateRange7d": "7 dias",
     "dateRange30d": "30 dias",
+    "dateRange90d": "90 dias", // nexusmind v0.1.129
     "dateRangeCustom": "Personalizado",
     "apply": "Aplicar",
     "used": "Usado",
     "detailInfo": "Informações detalhadas",
     "tokenStats": "Estatísticas de token",
+    "dailyDetail": "Detalhe Diário", // nexusmind v0.1.129
     "modelStats": "Estatísticas de uso do modelo",
+    "date": "Data", // nexusmind v0.1.129
     "model": "Modelo",
     "requests": "Solicitações",
     "inputTokens": "Tokens de entrada",
     "outputTokens": "Tokens de saída",
     "cacheCreationTokens": "Criação de Cache",
     "cacheReadTokens": "Leitura de cache",
+    "cacheWriteTokens": "Escrita de cache", // nexusmind v0.1.129
     "totalTokens": "Total de Tokens",
     "cost": "Custo",
     "quotaMode": "Modo de cota de chave",
@@ -6028,7 +6083,8 @@ const overrides: LocaleTree = {
     "enterApiKey": "Insira uma chave de API",
     "querySuccess": "Consulta bem-sucedida",
     "queryFailed": "Falha na consulta",
-    "queryFailedRetry": "Falha na consulta, tente novamente mais tarde"
+    "queryFailedRetry": "Falha na consulta, tente novamente mais tarde",
+    "noDailyUsage": "Sem dados de uso diário" // nexusmind v0.1.129
   },
   "setup": {
     "title": "Configuração Sub2API",
