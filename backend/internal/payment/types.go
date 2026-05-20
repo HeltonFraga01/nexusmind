@@ -18,6 +18,7 @@ const (
 	TypeLink         PaymentType = "link"
 	TypeEasyPay      PaymentType = "easypay"
 	TypeAirwallex    PaymentType = "airwallex"
+	TypeCiabra       PaymentType = "ciabra" // nexusmind
 )
 
 // Order status constants shared across payment and service layers.
@@ -85,6 +86,8 @@ func GetBasePaymentType(t string) string {
 		return TypeEasyPay
 	case t == TypeAirwallex:
 		return TypeAirwallex
+	case t == TypeCiabra: // nexusmind
+		return TypeCiabra
 	case t == TypeStripe || t == TypeCard || t == TypeLink:
 		return TypeStripe
 	case len(t) >= len(TypeAlipay) && t[:len(TypeAlipay)] == TypeAlipay:
@@ -108,6 +111,11 @@ type CreatePaymentRequest struct {
 	ClientIP           string // Payer's IP address
 	IsMobile           bool   // Whether the request comes from a mobile device
 	InstanceSubMethods string // Comma-separated sub-methods from instance supported_types (for Stripe)
+
+	// nexusmind: customer fields used by providers that bill named customers (e.g. Ciabra).
+	CustomerEmail    string
+	CustomerName     string
+	CustomerDocument string // CPF/CNPJ for Brazilian providers
 }
 
 // CreatePaymentResultType describes the shape of the create-payment result.

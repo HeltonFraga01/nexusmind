@@ -300,6 +300,10 @@ func buildPaymentOrderProviderSnapshot(sel *payment.InstanceSelection, req Creat
 		}
 		snapshot["currency"] = paymentProviderConfigCurrency(providerKey, sel.Config)
 	}
+	// nexusmind
+	if providerKey == payment.TypeCiabra {
+		snapshot["currency"] = paymentProviderConfigCurrency(providerKey, sel.Config)
+	}
 
 	if len(snapshot) == 1 {
 		return nil
@@ -440,7 +444,12 @@ func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.Paymen
 		ClientIP:    req.ClientIP,
 		IsMobile:    req.IsMobile,
 		ReturnURL:   providerReturnURL,
+		// nexusmind
+		CustomerDocument: req.CustomerDocument,
 	}, sel, outTradeNo, payAmountStr, subject)
+	// nexusmind: providers that bill named customers (Ciabra) need email + display name.
+	providerReq.CustomerEmail = strings.TrimSpace(order.UserEmail)
+	providerReq.CustomerName = deriveCustomerNameFromEmail(providerReq.CustomerEmail)
 	pr, err := prov.CreatePayment(ctx, providerReq)
 	if err != nil {
 		slog.Error("[PaymentService] CreatePayment failed", "provider", sel.ProviderKey, "instance", sel.InstanceID, "error", err)
@@ -487,7 +496,30 @@ func buildProviderCreatePaymentRequest(req CreateOrderRequest, sel *payment.Inst
 		ClientIP:           req.ClientIP,
 		IsMobile:           req.IsMobile,
 		InstanceSubMethods: selectedInstanceSupportedTypes(sel),
+		CustomerDocument:   strings.TrimSpace(req.CustomerDocument), // nexusmind
 	}
+}
+
+// nexusmind: deriveCustomerNameFromEmail returns a human-readable display name
+// from an email address. Providers that bill named customers (Ciabra) need at
+// least three characters; fall back to a generic label otherwise.
+func deriveCustomerNameFromEmail(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "NexusMind Customer"
+	}
+	local := email
+	if at := strings.Index(local, "@"); at > 0 {
+		local = local[:at]
+	}
+	local = strings.ReplaceAll(local, ".", " ")
+	local = strings.ReplaceAll(local, "_", " ")
+	local = strings.ReplaceAll(local, "-", " ")
+	local = strings.TrimSpace(local)
+	if len([]rune(local)) < 3 {
+		return "NexusMind Customer"
+	}
+	return local
 }
 
 func selectedInstanceSupportedTypes(sel *payment.InstanceSelection) string {
@@ -501,7 +533,7 @@ func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limit
 	if plan != nil {
 		productName := plan.ProductName
 		if productName == "" {
-			productName = "Sub2API Subscription " + plan.Name
+			productName = "NexusMind Subscription " + plan.Name // nexusmind
 		}
 		return applyPaymentProductNameAffix(productName, cfg)
 	}
@@ -513,7 +545,7 @@ func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limit
 	if hasPaymentProductNameAffix(cfg) {
 		return applyPaymentProductNameAffix(amountStr, cfg)
 	}
-	return "Sub2API " + amountStr + " " + currency
+	return "NexusMind " + amountStr + " " + currency // nexusmind
 }
 
 func hasPaymentProductNameAffix(cfg *PaymentConfig) bool {

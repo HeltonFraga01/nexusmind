@@ -186,6 +186,16 @@ func TestBuildPaymentOrderProviderSnapshot_IncludesProviderCurrency(t *testing.T
 	}, CreateOrderRequest{})
 	require.Equal(t, "USD", airwallexSnapshot["currency"])
 	require.Equal(t, "acct-78", airwallexSnapshot["merchant_id"])
+
+	// nexusmind
+	ciabraSnapshot := buildPaymentOrderProviderSnapshot(&payment.InstanceSelection{
+		InstanceID:  "79",
+		ProviderKey: payment.TypeCiabra,
+		Config: map[string]string{
+			"currency": "brl",
+		},
+	}, CreateOrderRequest{})
+	require.Equal(t, "BRL", ciabraSnapshot["currency"])
 }
 
 func valueOrEmpty(v *string) string {

@@ -83,6 +83,9 @@ type CreateOrderRequest struct {
 	PaymentSource   string
 	OrderType       string
 	PlanID          int64
+
+	// nexusmind: CPF/CNPJ used by Brazilian providers like Ciabra.
+	CustomerDocument string
 }
 
 type CreateOrderResponse struct {

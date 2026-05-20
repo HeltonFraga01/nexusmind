@@ -55,6 +55,14 @@ func TestWriteSuccessResponse(t *testing.T) {
 			wantBody:        "",
 		},
 		{
+			// nexusmind
+			name:            "ciabra returns plain text success",
+			providerKey:     payment.TypeCiabra,
+			wantCode:        http.StatusOK,
+			wantContentType: "text/plain",
+			wantBody:        "success",
+		},
+		{
 			name:            "easypay returns plain text success",
 			providerKey:     "easypay",
 			wantCode:        http.StatusOK,
@@ -177,6 +185,20 @@ func TestExtractOutTradeNo(t *testing.T) {
 			providerKey: payment.TypeAirwallex,
 			rawBody:     `{"name":"payment_intent.succeeded","data":{"object":{"merchant_order_id":"sub2_awx_123"}}}`,
 			want:        "sub2_awx_123",
+		},
+		{
+			// nexusmind
+			name:        "ciabra top-level external id",
+			providerKey: payment.TypeCiabra,
+			rawBody:     `{"status":"PAID","externalId":"sub2_cb_123"}`,
+			want:        "sub2_cb_123",
+		},
+		{
+			// nexusmind
+			name:        "ciabra nested invoice external id",
+			providerKey: payment.TypeCiabra,
+			rawBody:     `{"data":{"invoice":{"externalId":"sub2_cb_456"}}}`,
+			want:        "sub2_cb_456",
 		},
 	}
 
