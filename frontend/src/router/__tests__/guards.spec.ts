@@ -84,7 +84,7 @@ function simulateGuard(
       return authState.isAdmin ? '/admin/dashboard' : '/dashboard'
     }
     if (authState.backendModeEnabled && !authState.isAuthenticated) {
-      const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+      const allowed = ['/home', '/login', '/key-usage', '/setup', '/payment/result'] // nexusmind: /home
       const callbackPaths = [
         '/auth/callback',
         '/auth/linuxdo/callback',
@@ -133,7 +133,7 @@ function simulateGuard(
     if (authState.isAuthenticated && authState.isAdmin) {
       return null
     }
-    const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+    const allowed = ['/home', '/login', '/key-usage', '/setup', '/payment/result'] // nexusmind: /home
     const callbackPaths = [
       '/auth/callback',
       '/auth/linuxdo/callback',
@@ -336,7 +336,8 @@ describe('路由守卫逻辑', () => {
   })
 
   describe('Backend Mode', () => {
-    it('unauthenticated: /home redirects to /login', () => {
+    // nexusmind: /home is a public landing page, allowed in backend mode
+    it('unauthenticated: /home is allowed', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
         isAdmin: false,
@@ -345,7 +346,7 @@ describe('路由守卫逻辑', () => {
         hasPendingAuthSession: false,
       }
       const redirect = simulateGuard('/home', { requiresAuth: false }, authState)
-      expect(redirect).toBe('/login')
+      expect(redirect).toBeNull()
     })
 
     it('unauthenticated: /login is allowed', () => {
