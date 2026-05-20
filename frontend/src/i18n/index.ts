@@ -1,19 +1,21 @@
 import { createI18n } from 'vue-i18n'
+import nexusmindOverlay from './nexusmind-i18n' // nexusmind
 
-type LocaleCode = 'en' | 'zh'
+type LocaleCode = 'en' | 'zh' | 'pt-BR' // nexusmind
 
 type LocaleMessages = Record<string, any>
 
 const LOCALE_KEY = 'sub2api_locale'
-const DEFAULT_LOCALE: LocaleCode = 'en'
+const DEFAULT_LOCALE: LocaleCode = 'pt-BR' // nexusmind: pt-BR default for the Brazilian audience
 
 const localeLoaders: Record<LocaleCode, () => Promise<{ default: LocaleMessages }>> = {
   en: () => import('./locales/en'),
-  zh: () => import('./locales/zh')
+  zh: () => import('./locales/zh'),
+  'pt-BR': () => import('./locales/pt-BR') // nexusmind
 }
 
 function isLocaleCode(value: string): value is LocaleCode {
-  return value === 'en' || value === 'zh'
+  return value === 'en' || value === 'zh' || value === 'pt-BR' // nexusmind
 }
 
 function getDefaultLocale(): LocaleCode {
@@ -25,6 +27,11 @@ function getDefaultLocale(): LocaleCode {
   const browserLang = navigator.language.toLowerCase()
   if (browserLang.startsWith('zh')) {
     return 'zh'
+  }
+
+  // nexusmind
+  if (browserLang.startsWith('pt')) {
+    return 'pt-BR'
   }
 
   return DEFAULT_LOCALE
@@ -42,6 +49,28 @@ export const i18n = createI18n({
 
 const loadedLocales = new Set<LocaleCode>()
 
+// nexusmind: deep-merge the NexusMind overlay (Ciabra keys) into a locale so
+// upstream en.ts / zh.ts never need editing.
+function isPlainObject(value: unknown): value is LocaleMessages {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function deepMerge(base: LocaleMessages, patch: LocaleMessages): LocaleMessages {
+  const result: LocaleMessages = { ...base }
+  for (const [key, value] of Object.entries(patch)) {
+    result[key] =
+      isPlainObject(value) && isPlainObject(result[key])
+        ? deepMerge(result[key], value)
+        : value
+  }
+  return result
+}
+
+function mergeNexusmindOverlay(locale: LocaleCode, messages: LocaleMessages): LocaleMessages {
+  const extra = nexusmindOverlay[locale]
+  return extra ? deepMerge(messages, extra) : messages
+}
+
 export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
   if (loadedLocales.has(locale)) {
     return
@@ -49,7 +78,7 @@ export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
 
   const loader = localeLoaders[locale]
   const module = await loader()
-  i18n.global.setLocaleMessage(locale, module.default)
+  i18n.global.setLocaleMessage(locale, mergeNexusmindOverlay(locale, module.default)) // nexusmind
   loadedLocales.add(locale)
 }
 
@@ -85,7 +114,8 @@ export function getLocale(): LocaleCode {
 
 export const availableLocales = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' }
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'pt-BR', name: 'Português (Brasil)', flag: '🇧🇷' } // nexusmind
 ] as const
 
 export default i18n

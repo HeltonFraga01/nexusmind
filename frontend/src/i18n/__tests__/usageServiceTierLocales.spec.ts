@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import en from '../locales/en'
+import ptBR from '../locales/pt-BR' // nexusmind
 import zh from '../locales/zh'
 
 describe('usage service tier locale keys', () => {
@@ -16,5 +17,15 @@ describe('usage service tier locale keys', () => {
     expect(en.usage.serviceTierPriority).toBe('Fast')
     expect(en.usage.serviceTierFlex).toBe('Flex')
     expect(en.usage.serviceTierStandard).toBe('Standard')
+  })
+
+  // nexusmind
+  it('contains pt-BR labels and falls back to inherited English keys', () => {
+    expect(ptBR.usage.serviceTier).toBe('Classe de serviço')
+    expect(ptBR.usage.serviceTierPriority).toBe('Rápido')
+    expect(ptBR.usage.serviceTierFlex).toBe('Flex')
+    expect(ptBR.usage.serviceTierStandard).toBe('Padrão')
+    // pt-BR is deepMerge(en, overrides), so every English namespace is inherited.
+    expect(Object.keys(ptBR)).toEqual(expect.arrayContaining(Object.keys(en)))
   })
 })
