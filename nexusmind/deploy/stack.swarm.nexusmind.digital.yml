@@ -15,6 +15,12 @@
 services:
   postgres:
     image: "${POSTGRES_IMAGE:-postgres:18-alpine}"
+    # nexusmind: max_connections=200 — o pool do app (max_open_conns) pode dobrar
+    # durante deploy start-first; default 100 do Postgres causava "too many clients".
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=${POSTGRES_MAX_CONNECTIONS:-200}"
     environment:
       PGDATA: /var/lib/postgresql/data
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
@@ -104,6 +110,9 @@ services:
       SERVER_MODE: "${SERVER_MODE:-release}"
       RUN_MODE: "${RUN_MODE:-standard}"
       TZ: "${TZ:-America/Sao_Paulo}"
+      # nexusmind: confia no Traefik (overlay do Swarm) para ler X-Forwarded-For;
+      # sem isso o rate-limit/ban de IP/auditoria veem todo tráfego como 1 IP só.
+      SERVER_TRUSTED_PROXIES: "${SERVER_TRUSTED_PROXIES:-10.0.0.0/8}"
 
       DATABASE_HOST: nexusmind_postgres
       DATABASE_PORT: "5432"
@@ -111,6 +120,10 @@ services:
       DATABASE_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
       DATABASE_DBNAME: "${POSTGRES_DB:-nexusmind}"
       DATABASE_SSLMODE: "${DATABASE_SSLMODE:-disable}"
+      # nexusmind: pool limitado p/ caber em max_connections=200 mesmo com
+      # 2 containers do app no overlap do deploy start-first (2x80=160 < 200).
+      DATABASE_MAX_OPEN_CONNS: "${DATABASE_MAX_OPEN_CONNS:-80}"
+      DATABASE_MAX_IDLE_CONNS: "${DATABASE_MAX_IDLE_CONNS:-20}"
 
       REDIS_HOST: nexusmind_redis
       REDIS_PORT: "6379"
@@ -130,6 +143,11 @@ services:
       # Domínio público (Ciabra usa WEBHOOK_BASE_URL para callbacks de PIX)
       WEBHOOK_BASE_URL: "${WEBHOOK_BASE_URL:-https://nexusmind.digital}"
       CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-https://nexusmind.digital}" # nexusmind: corrigido de CORS_ORIGINS (viper mapeia cors.allowed_origins)
+
+      # nexusmind: hardening de SSRF — só HTTPS e bloqueia hosts de rede privada
+      # nas URLs de upstream configuráveis pelo admin (provedores de IA são públicos).
+      SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: "${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-false}"
+      SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: "${SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP:-false}"
     volumes:
       - nexusmind_data:/app/data
     networks:
