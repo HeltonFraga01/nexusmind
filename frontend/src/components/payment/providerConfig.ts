@@ -36,13 +36,14 @@ export const PROVIDER_SUPPORTED_TYPES: Record<string, string[]> = {
   wxpay: ['wxpay'],
   stripe: ['card', 'alipay', 'wxpay', 'link'],
   airwallex: ['airwallex'],
+  ciabra: ['ciabra'], // nexusmind
 }
 
 /** Available payment modes for EasyPay providers. */
 export const EASYPAY_PAYMENT_MODES = ['qrcode', 'popup'] as const
 
 /** Fixed display order for user-facing payment methods */
-export const METHOD_ORDER = ['alipay', 'alipay_direct', 'wxpay', 'wxpay_direct', 'stripe', 'airwallex'] as const
+export const METHOD_ORDER = ['alipay', 'alipay_direct', 'wxpay', 'wxpay_direct', 'stripe', 'airwallex', 'ciabra'] as const // nexusmind
 
 /** Payment mode constants */
 export const PAYMENT_MODE_QRCODE = 'qrcode'
@@ -65,6 +66,7 @@ export const PAYMENT_CURRENCY_OPTIONS: TypeOption[] = [
   { value: 'JPY', label: 'JPY' },
   { value: 'KRW', label: 'KRW' },
   { value: 'NZD', label: 'NZD' },
+  { value: 'BRL', label: 'BRL' }, // nexusmind
 ]
 
 // 与后端当前集成的 stripe-go v85.0.0 的 stripe.APIVersion 保持一致。
@@ -96,6 +98,7 @@ export const WEBHOOK_PATHS: Record<string, string> = {
   wxpay: '/api/v1/payment/webhook/wxpay',
   stripe: '/api/v1/payment/webhook/stripe',
   airwallex: '/api/v1/payment/webhook/airwallex',
+  ciabra: '/api/v1/payment/webhook/ciabra', // nexusmind
 }
 
 export const RETURN_PATH = '/payment/result'
@@ -107,6 +110,7 @@ export const PROVIDER_CALLBACK_PATHS: Record<string, CallbackPaths> = {
   wxpay: { notifyUrl: WEBHOOK_PATHS.wxpay },
   // stripe: 不需要回调 URL 配置，Webhook 单独配置。
   // airwallex: 不需要回调 URL 配置，Webhook 在空中云汇后台配置。
+  // nexusmind — ciabra: webhook configured in the Ciabra/AZ Center dashboard.
 }
 
 /** Per-provider config fields (excludes notifyUrl/returnUrl which are handled separately). */
@@ -146,6 +150,27 @@ export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
     { key: 'countryCode', label: '', sensitive: false, defaultValue: 'CN' },
     { key: 'currency', label: '', sensitive: false, defaultValue: 'CNY', hintKey: 'admin.settings.payment.field_paymentCurrencyHint', options: PAYMENT_CURRENCY_OPTIONS },
     { key: 'accountId', label: '', sensitive: false, optional: true, clearable: true, hintKey: 'admin.settings.payment.field_accountIdHint' },
+  ],
+  // nexusmind — Ciabra (AZ Center PIX) provider config fields.
+  ciabra: [
+    // publicKey is the "Chave Pública" from Ciabra — by definition not a secret.
+    { key: 'publicKey', label: '', sensitive: false },
+    { key: 'secretKey', label: '', sensitive: true },
+    { key: 'apiBase', label: '', sensitive: false, defaultValue: 'https://api.az.center', hintKey: 'admin.settings.payment.field_ciabraApiBaseHint' },
+    { key: 'paymentTypes', label: '', sensitive: false, defaultValue: 'PIX', hintKey: 'admin.settings.payment.field_ciabraPaymentTypesHint' },
+    { key: 'dueDays', label: '', sensitive: false, defaultValue: '1', hintKey: 'admin.settings.payment.field_ciabraDueDaysHint' },
+    { key: 'minAmountCents', label: '', sensitive: false, defaultValue: '500', optional: true, clearable: true, hintKey: 'admin.settings.payment.field_ciabraMinAmountHint' },
+    // Public webhook URL (e.g. https://your-host/api/v1/payment/webhook/ciabra). When set,
+    // it is registered per-invoice in the Ciabra payload. Leave empty if you configured
+    // global webhooks in the Ciabra dashboard.
+    { key: 'webhookPublicURL', label: '', sensitive: false, optional: true, clearable: true, hintKey: 'admin.settings.payment.field_ciabraWebhookPublicURLHint' },
+    { key: 'webhookSecret', label: '', sensitive: true, optional: true, clearable: true, hintKey: 'admin.settings.payment.field_ciabraWebhookSecretHint' },
+    { key: 'webhookSignatureHeader', label: '', sensitive: false, defaultValue: 'x-signature', optional: true, clearable: true },
+    { key: 'webhookTimestampHeader', label: '', sensitive: false, defaultValue: 'x-timestamp', optional: true, clearable: true },
+    { key: 'webhookToleranceSeconds', label: '', sensitive: false, defaultValue: '300', optional: true, clearable: true },
+    // Fallback CPF/CNPJ used when the order doesn't carry one. Useful for testing.
+    { key: 'defaultDocument', label: '', sensitive: false, optional: true, clearable: true, hintKey: 'admin.settings.payment.field_ciabraDefaultDocumentHint' },
+    { key: 'currency', label: '', sensitive: false, defaultValue: 'BRL', hintKey: 'admin.settings.payment.field_paymentCurrencyHint', options: PAYMENT_CURRENCY_OPTIONS },
   ],
 }
 

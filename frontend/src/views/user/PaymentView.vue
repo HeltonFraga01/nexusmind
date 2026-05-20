@@ -57,6 +57,23 @@
                 @select="selectedMethod = $event"
               />
             </div>
+            <!-- nexusmind -->
+            <div v-if="selectedMethod === 'ciabra'" class="card p-6">
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ t('payment.ciabra.documentLabel') }}
+              </label>
+              <input
+                v-model="customerDocument"
+                type="text"
+                :placeholder="t('payment.ciabra.documentPlaceholder')"
+                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
+                autocomplete="off"
+                inputmode="numeric"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{ t('payment.ciabra.documentHint') }}
+              </p>
+            </div>
             <div v-if="validAmount > 0" class="card p-6">
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
@@ -145,6 +162,23 @@
                   :selected="selectedMethod"
                   @select="selectedMethod = $event"
                 />
+              </div>
+              <!-- nexusmind -->
+              <div v-if="selectedMethod === 'ciabra'" class="card p-6">
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('payment.ciabra.documentLabel') }}
+                </label>
+                <input
+                  v-model="customerDocument"
+                  type="text"
+                  :placeholder="t('payment.ciabra.documentPlaceholder')"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
+                  autocomplete="off"
+                  inputmode="numeric"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('payment.ciabra.documentHint') }}
+                </p>
               </div>
               <div v-if="feeRate > 0 && selectedPlan.price > 0" class="card p-6">
                 <div class="space-y-2 text-sm">
@@ -304,6 +338,7 @@ const errorHintMessage = ref('')
 const activeTab = ref<'recharge' | 'subscription'>('recharge')
 const amount = ref<number | null>(null)
 const selectedMethod = ref('')
+const customerDocument = ref('') // nexusmind
 const selectedPlan = ref<SubscriptionPlan | null>(null)
 const previewImage = ref('')
 
@@ -634,6 +669,7 @@ const paymentButtonClass = computed(() => {
   if (m.includes('wxpay')) return 'btn-wxpay'
   if (m === 'stripe') return 'btn-stripe'
   if (m === 'airwallex') return 'btn-airwallex'
+  if (m === 'ciabra') return 'btn-airwallex' // nexusmind
   return 'btn-primary'
 })
 
@@ -699,6 +735,8 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       isMobile: isMobileDevice(),
       isWechatBrowser: typeof window !== 'undefined' && /MicroMessenger/i.test(window.navigator.userAgent),
       forceQRCode: !!(checkout.value.alipay_force_qrcode && normalizeVisibleMethod(requestType) === 'alipay'),
+      // nexusmind
+      customerDocument: requestType === 'ciabra' ? customerDocument.value : '',
     })
     if (options.openid) {
       payload.openid = options.openid
