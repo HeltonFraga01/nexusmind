@@ -129,7 +129,7 @@ services:
 
       # Domínio público (Ciabra usa WEBHOOK_BASE_URL para callbacks de PIX)
       WEBHOOK_BASE_URL: "${WEBHOOK_BASE_URL:-https://nexusmind.digital}"
-      CORS_ORIGINS: "${CORS_ORIGINS:-https://nexusmind.digital}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-https://nexusmind.digital}" # nexusmind: corrigido de CORS_ORIGINS (viper mapeia cors.allowed_origins)
     volumes:
       - nexusmind_data:/app/data
     networks:
