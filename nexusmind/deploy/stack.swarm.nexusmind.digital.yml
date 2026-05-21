@@ -10,6 +10,12 @@
 # DNS interno nexusmind_postgres / nexusmind_redis):
 #   export $(grep -v '^#' .env.nexusmind | xargs)
 #   docker stack deploy -c nexusmind/deploy/stack.swarm.nexusmind.digital.yml nexusmind
+#
+# NOTA DE UPGRADE: postgres/redis usam order=stop-first e o app não tolera o
+# banco fora na inicialização. Se um `stack deploy` mudar postgres E o app ao
+# mesmo tempo, o app pode perder a corrida e cair (Swarm faz rollback). Em
+# upgrades que tocam o postgres, rode o deploy 2x: a 1ª sobe o postgres novo,
+# a 2ª reconcilia o app já com o banco no ar.
 # ============================================================================
 
 services:
@@ -32,6 +38,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - nexusmind-internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexusmind} -d ${POSTGRES_DB:-nexusmind}"]
       interval: 10s
@@ -40,6 +51,14 @@ services:
       start_period: 20s
     deploy:
       replicas: 1
+      resources:
+        # nexusmind: limite de CPU p/ proteger vizinhos no host Swarm compartilhado
+        limits:
+          cpus: "1.5"
+          memory: 1536M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
       placement:
         constraints:
           - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
@@ -75,6 +94,11 @@ services:
       - redis_data:/data
     networks:
       - nexusmind-internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -83,6 +107,13 @@ services:
       start_period: 10s
     deploy:
       replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
       placement:
         constraints:
           - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
@@ -101,7 +132,7 @@ services:
         order: stop-first
 
   nexusmind:
-    image: "${NEXUSMIND_IMAGE:-heltonfraga/nexusmind:latest}"
+    image: "${NEXUSMIND_IMAGE:?set NEXUSMIND_IMAGE}"
     environment:
       AUTO_SETUP: "true"
 
@@ -124,6 +155,9 @@ services:
       # 2 containers do app no overlap do deploy start-first (2x80=160 < 200).
       DATABASE_MAX_OPEN_CONNS: "${DATABASE_MAX_OPEN_CONNS:-80}"
       DATABASE_MAX_IDLE_CONNS: "${DATABASE_MAX_IDLE_CONNS:-20}"
+      # nexusmind: reciclagem de conexões (recomendado pelo docker-compose oficial do sub2api)
+      DATABASE_CONN_MAX_LIFETIME_MINUTES: "${DATABASE_CONN_MAX_LIFETIME_MINUTES:-30}"
+      DATABASE_CONN_MAX_IDLE_TIME_MINUTES: "${DATABASE_CONN_MAX_IDLE_TIME_MINUTES:-5}"
 
       REDIS_HOST: nexusmind_redis
       REDIS_PORT: "6379"
@@ -142,7 +176,7 @@ services:
 
       # Domínio público (Ciabra usa WEBHOOK_BASE_URL para callbacks de PIX)
       WEBHOOK_BASE_URL: "${WEBHOOK_BASE_URL:-https://nexusmind.digital}"
-      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-https://nexusmind.digital}" # nexusmind: corrigido de CORS_ORIGINS (viper mapeia cors.allowed_origins)
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-https://nexusmind.digital}" # nexusmind: viper mapeia cors.allowed_origins
 
       # nexusmind: hardening de SSRF — só HTTPS e bloqueia hosts de rede privada
       # nas URLs de upstream configuráveis pelo admin (provedores de IA são públicos).
@@ -153,6 +187,11 @@ services:
     networks:
       - nexusmind-internal
       - network_public
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://localhost:8080/health"]
       interval: 30s
@@ -161,6 +200,14 @@ services:
       start_period: 40s
     deploy:
       replicas: 1
+      resources:
+        # nexusmind: teto 1G p/ folga sob carga; CPU limitada contra noisy-neighbor
+        limits:
+          cpus: "2.0"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
       placement:
         constraints:
           - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
@@ -190,12 +237,70 @@ services:
         - traefik.http.services.nexusmind.loadbalancer.healthcheck.interval=30s
         - traefik.http.services.nexusmind.loadbalancer.healthcheck.timeout=10s
 
+  # nexusmind: backup automático do Postgres — pg_dump -Fc diário, retenção 14 dumps.
+  # Usa a mesma imagem postgres:18-alpine (pg_dump compatível com o servidor 18).
+  # Em falha (ex: banco reiniciando), tenta de novo em 5 min.
+  pgbackup:
+    image: "${POSTGRES_IMAGE:-postgres:18-alpine}"
+    environment:
+      PGHOST: nexusmind_postgres
+      PGPORT: "5432"
+      PGUSER: "${POSTGRES_USER:-nexusmind}"
+      PGDATABASE: "${POSTGRES_DB:-nexusmind}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      TZ: "${TZ:-America/Sao_Paulo}"
+      KEEP: "${PGBACKUP_KEEP:-14}"
+    command:
+      - sh
+      - -ec
+      - |
+        echo "[pgbackup] iniciado - retencao=$$KEEP dumps, intervalo 24h"
+        while true; do
+          TS=$$(date +%Y%m%d-%H%M%S)
+          OUT="/backups/nexusmind-$$TS.dump"
+          if pg_dump -Fc -f "$$OUT"; then
+            echo "[pgbackup] OK $$OUT ($$(du -h "$$OUT" | cut -f1))"
+            ls -1t /backups/nexusmind-*.dump 2>/dev/null | tail -n +$$(( KEEP + 1 )) | xargs -r rm -f
+            sleep 86400
+          else
+            echo "[pgbackup] FALHOU $$TS - retry em 5min"
+            rm -f "$$OUT"
+            sleep 300
+          fi
+        done
+    volumes:
+      - pgbackup_data:/backups
+    networks:
+      - nexusmind-internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+      placement:
+        constraints:
+          - "node.hostname == ${SWARM_STATEFUL_NODE:?set SWARM_STATEFUL_NODE}"
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
   nexusmind_data:
+    driver: local
+  pgbackup_data:
     driver: local
 
 networks:
