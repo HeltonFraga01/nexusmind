@@ -54,6 +54,11 @@
         <slot name="footer" />
       </div>
 
+      <!-- Locale Switcher -->
+      <div class="mt-6 flex justify-center">
+        <LocaleSwitcher />
+      </div>
+
       <!-- Copyright -->
       <div class="mt-8 text-center text-xs text-gray-400 dark:text-dark-500">
         &copy; {{ currentYear }} {{ siteName }}. All rights reserved.
@@ -66,6 +71,7 @@
 import { computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores'
 import { sanitizeUrl } from '@/utils/url'
+import { LocaleSwitcher } from '@/components/common'
 
 const appStore = useAppStore()
 

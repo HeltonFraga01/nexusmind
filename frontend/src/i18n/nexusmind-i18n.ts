@@ -45,13 +45,35 @@ const ciabraEn: LocaleTree = {
       documentHint: 'Required to issue the PIX charge via Ciabra Invoice.',
     },
   },
+  auth: {
+    agreementWarningLogin: 'Please read and agree to the latest terms before logging in.',
+    agreementWarningRegister: 'Please read and agree to the latest terms before registering.',
+    agreementWarningDisabled: 'You must agree to the latest terms first before you can proceed.'
+  }
 }
 
-// Keyed by locale code. zh inherits the English Ciabra labels; pt-BR.ts owns its own.
+const ciabraZh: LocaleTree = {
+  ...ciabraEn,
+  auth: {
+    agreementWarningLogin: '请先阅读并同意最新条款后再登录。',
+    agreementWarningRegister: '请先阅读并同意最新条款后再注册。',
+    agreementWarningDisabled: '未同意最新条款前，无法进行后续操作。'
+  }
+}
+
+const ciabraPt: LocaleTree = {
+  auth: {
+    agreementWarningLogin: 'Por favor, leia e concorde com os termos antes de fazer login.',
+    agreementWarningRegister: 'Por favor, leia e concorde com os termos antes de registrar-se.',
+    agreementWarningDisabled: 'Você deve concordar com os termos antes de poder continuar.'
+  }
+}
+
+// Keyed by locale code. zh inherits the English Ciabra labels with Chinese auth warnings; pt-BR carries its own overrides.
 const overlay: Record<string, LocaleTree> = {
   en: ciabraEn,
-  zh: ciabraEn,
-  'pt-BR': {},
+  zh: ciabraZh,
+  'pt-BR': ciabraPt,
 }
 
 export default overlay

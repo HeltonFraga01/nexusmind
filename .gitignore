@@ -136,3 +136,10 @@ docs/*
 frontend/coverage/
 aicodex
 output/
+
+# ===================
+# Runtime / local files (nexusmind)
+# ===================
+config.yaml
+.installed
+data/

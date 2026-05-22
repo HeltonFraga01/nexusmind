@@ -47,6 +47,8 @@ coverage/
 # Local config
 config.yaml
 config.local.yaml
+.installed
+data/
 
 # Logs
 *.log
