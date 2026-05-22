@@ -1621,6 +1621,7 @@ const overrides: LocaleTree = {
         "selectKeyTitle": "Selecione minha chave API",
         "selectKeyHint": "Somente suas chaves ativas e não expiradas são listadas.",
         "noActiveKey": "Nenhuma chave de API ativa disponível",
+        "selectKeyRevealRequired": "Esta lista mostra apenas chaves mascaradas. Cole uma chave bruta explicitamente para usá-la aqui.",
         "primaryModel": "Modelo Primário",
         "primaryModelPlaceholder": "gpt-4o-mini",
         "extraModels": "Modelos Extras",

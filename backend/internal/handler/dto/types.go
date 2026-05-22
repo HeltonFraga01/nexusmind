@@ -79,6 +79,11 @@ type APIKey struct {
 	Group *Group `json:"group,omitempty"`
 }
 
+type APIKeyCreateResponse struct {
+	APIKey *APIKey `json:"api_key"`
+	RawKey string  `json:"raw_key"`
+}
+
 type Group struct {
 	ID             int64   `json:"id"`
 	Name           string  `json:"name"`

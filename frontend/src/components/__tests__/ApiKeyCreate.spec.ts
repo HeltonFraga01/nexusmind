@@ -67,7 +67,7 @@ const ApiKeyCreateTestComponent = defineComponent({
           name: formData.name,
           group_id: formData.group_id,
         })
-        createdKey.value = result.key
+        createdKey.value = result.raw_key
         appStore.showSuccess('API Key 创建成功')
       } catch (error: any) {
         appStore.showError(error.message || '创建失败')
@@ -101,9 +101,8 @@ describe('ApiKey 创建流程', () => {
 
   it('创建 API Key 调用 API 并显示结果', async () => {
     mockCreate.mockResolvedValue({
-      id: 1,
-      key: 'sk-test-key-12345',
-      name: 'My Test Key',
+      api_key: { id: 1, key: 'sk-t***', name: 'My Test Key' },
+      raw_key: 'sk-test-key-12345',
     })
 
     const wrapper = mount(ApiKeyCreateTestComponent)
@@ -122,9 +121,8 @@ describe('ApiKey 创建流程', () => {
 
   it('选择分组后正确传参', async () => {
     mockCreate.mockResolvedValue({
-      id: 2,
-      key: 'sk-group-key',
-      name: 'Group Key',
+      api_key: { id: 2, key: 'sk-g***', name: 'Group Key' },
+      raw_key: 'sk-group-key',
     })
 
     const wrapper = mount(ApiKeyCreateTestComponent)
@@ -176,7 +174,7 @@ describe('ApiKey 创建流程', () => {
 
     expect(wrapper.find('button').attributes('disabled')).toBeDefined()
 
-    resolveCreate!({ id: 1, key: 'sk-test', name: 'Test Key' })
+    resolveCreate!({ api_key: { id: 1, key: 'sk-t***', name: 'Test Key' }, raw_key: 'sk-test' })
     await flushPromises()
 
     expect(wrapper.find('button').attributes('disabled')).toBeUndefined()

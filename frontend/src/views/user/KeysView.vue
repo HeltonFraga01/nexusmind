@@ -61,10 +61,10 @@
           <template #cell-key="{ value, row }">
             <div class="flex items-center gap-2">
               <code class="code text-xs">
-                {{ maskApiKey(value) }}
+                {{ value }}
               </code>
               <button
-                @click="copyToClipboard(value, row.id)"
+                @click="copyToClipboard(row)"
                 class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-dark-700"
                 :class="
                   copiedKeyId === row.id
@@ -923,7 +923,7 @@
     <!-- Use Key Modal -->
     <UseKeyModal
       :show="showUseKeyModal"
-      :api-key="selectedKey?.key || ''"
+      :api-key="selectedKeySecret"
       :base-url="publicSettings?.api_base_url || ''"
       :platform="selectedKey?.group?.platform || null"
       :allow-messages-dispatch="selectedKey?.group?.allow_messages_dispatch || false"
@@ -1072,7 +1072,6 @@ import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
 import { formatDateTime } from '@/utils/format'
-import { maskApiKey } from '@/utils/maskApiKey'
 import {
   buildCcSwitchImportDeeplink,
   type CcSwitchClientType
@@ -1146,6 +1145,7 @@ const showUseKeyModal = ref(false)
 const showCcsClientSelect = ref(false)
 const pendingCcsRow = ref<ApiKey | null>(null)
 const selectedKey = ref<ApiKey | null>(null)
+const selectedKeySecret = ref<string>('')
 const copiedKeyId = ref<number | null>(null)
 const groupSelectorKeyId = ref<number | null>(null)
 const publicSettings = ref<PublicSettings | null>(null)
@@ -1265,13 +1265,18 @@ const filteredGroupOptions = computed(() => {
   })
 })
 
-const copyToClipboard = async (text: string, keyId: number) => {
-  const success = await clipboardCopy(text, t('keys.copied'))
-  if (success) {
-    copiedKeyId.value = keyId
-    setTimeout(() => {
-      copiedKeyId.value = null
-    }, 800)
+const copyToClipboard = async (key: ApiKey) => {
+  try {
+    const revealed = await keysAPI.reveal(key.id)
+    const success = await clipboardCopy(revealed.raw_key, t('keys.copied'))
+    if (success) {
+      copiedKeyId.value = key.id
+      setTimeout(() => {
+        copiedKeyId.value = null
+      }, 800)
+    }
+  } catch (error: any) {
+    appStore.showError(error?.message || t('keys.failedToLoad'))
   }
 }
 
@@ -1359,14 +1364,21 @@ const loadPublicSettings = async () => {
   }
 }
 
-const openUseKeyModal = (key: ApiKey) => {
-  selectedKey.value = key
-  showUseKeyModal.value = true
+const openUseKeyModal = async (key: ApiKey) => {
+  try {
+    const revealed = await keysAPI.reveal(key.id)
+    selectedKey.value = revealed.api_key
+    selectedKeySecret.value = revealed.raw_key
+    showUseKeyModal.value = true
+  } catch (error: any) {
+    appStore.showError(error?.message || t('keys.failedToLoad'))
+  }
 }
 
 const closeUseKeyModal = () => {
   showUseKeyModal.value = false
   selectedKey.value = null
+  selectedKeySecret.value = ''
 }
 
 const handlePageChange = (page: number) => {
@@ -1555,9 +1567,10 @@ const handleSubmit = async () => {
         rate_limit_7d: rateLimitData.rate_limit_7d,
       })
       appStore.showSuccess(t('keys.keyUpdatedSuccess'))
+      closeModals()
     } else {
       const customKey = formData.value.use_custom_key ? formData.value.custom_key : undefined
-      await keysAPI.create(
+      const created = await keysAPI.create(
         formData.value.name,
         formData.value.group_id,
         customKey,
@@ -1567,13 +1580,15 @@ const handleSubmit = async () => {
         expiresInDays,
         rateLimitData
       )
+      selectedKey.value = created.api_key
+      selectedKeySecret.value = created.raw_key
       appStore.showSuccess(t('keys.keyCreatedSuccess'))
-      // Only advance tour if active, on submit step, and creation succeeded
       if (onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) {
         onboardingStore.nextStep(500)
       }
+      closeModals()
+      showUseKeyModal.value = true
     }
-    closeModals()
     loadApiKeys()
   } catch (error: any) {
     const errorMsg = error.response?.data?.detail || t('keys.failedToSave')
@@ -1704,48 +1719,47 @@ const importToCcswitch = (row: ApiKey) => {
   executeCcsImport(row, platform === 'gemini' ? 'gemini' : 'claude')
 }
 
-const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
-  const baseUrl = publicSettings.value?.api_base_url || window.location.origin
-  const platform = row.group?.platform || 'anthropic'
-
-  const usageScript = `({
-    request: {
-      url: "{{baseUrl}}/v1/usage",
-      method: "GET",
-      headers: { "Authorization": "Bearer {{apiKey}}" }
-    },
-    extractor: function(response) {
-      const remaining = response?.remaining ?? response?.quota?.remaining ?? response?.balance;
-      const unit = response?.unit ?? response?.quota?.unit ?? "USD";
-      return {
-        isValid: response?.is_active ?? response?.isValid ?? true,
-        remaining,
-        unit
-      };
-    }
-  })`
-  const providerName = (publicSettings.value?.site_name || 'sub2api').trim() || 'sub2api'
-  const deeplink = buildCcSwitchImportDeeplink({
-    baseUrl,
-    platform,
-    clientType,
-    providerName,
-    apiKey: row.key,
-    usageScript
-  })
-
+const executeCcsImport = async (row: ApiKey, clientType: CcSwitchClientType) => {
   try {
+    const revealed = await keysAPI.reveal(row.id)
+    const baseUrl = publicSettings.value?.api_base_url || window.location.origin
+    const platform = row.group?.platform || 'anthropic'
+
+    const usageScript = `({
+      request: {
+        url: "{{baseUrl}}/v1/usage",
+        method: "GET",
+        headers: { "Authorization": "Bearer {{apiKey}}" }
+      },
+      extractor: function(response) {
+        const remaining = response?.remaining ?? response?.quota?.remaining ?? response?.balance;
+        const unit = response?.unit ?? response?.quota?.unit ?? "USD";
+        return {
+          isValid: response?.is_active ?? response?.isValid ?? true,
+          remaining,
+          unit
+        };
+      }
+    })`
+    const providerName = (publicSettings.value?.site_name || 'sub2api').trim() || 'sub2api'
+    const deeplink = buildCcSwitchImportDeeplink({
+      baseUrl,
+      platform,
+      clientType,
+      providerName,
+      apiKey: revealed.raw_key,
+      usageScript
+    })
+
     window.open(deeplink, '_self')
 
-    // Check if the protocol handler worked by detecting if we're still focused
     setTimeout(() => {
       if (document.hasFocus()) {
-        // Still focused means the protocol handler likely failed
         appStore.showError(t('keys.ccSwitchNotInstalled'))
       }
     }, 100)
-  } catch (error) {
-    appStore.showError(t('keys.ccSwitchNotInstalled'))
+  } catch (error: any) {
+    appStore.showError(error?.message || t('keys.ccSwitchNotInstalled'))
   }
 }
 

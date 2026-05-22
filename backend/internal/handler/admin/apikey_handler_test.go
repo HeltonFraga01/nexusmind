@@ -83,12 +83,14 @@ func TestAdminAPIKeyHandler_UpdateGroup_BindGroup(t *testing.T) {
 	var data struct {
 		APIKey struct {
 			ID      int64  `json:"id"`
+			Key     string `json:"key"`
 			GroupID *int64 `json:"group_id"`
 		} `json:"api_key"`
 		AutoGrantedGroupAccess bool `json:"auto_granted_group_access"`
 	}
 	require.NoError(t, json.Unmarshal(resp.Data, &data))
 	require.Equal(t, int64(10), data.APIKey.ID)
+	require.Equal(t, "sk-t***", data.APIKey.Key)
 	require.NotNil(t, data.APIKey.GroupID)
 	require.Equal(t, int64(2), *data.APIKey.GroupID)
 }

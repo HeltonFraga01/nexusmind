@@ -487,9 +487,9 @@ async function openMyKeyPicker() {
   }
 }
 
-function pickMyKey(k: ApiKey) {
-  form.api_key = k.key
+function pickMyKey(_k: ApiKey) {
   showKeyPicker.value = false
+  appStore.showError(t('admin.channelMonitor.form.selectKeyRevealRequired'))
 }
 
 function buildPayload(): CreateParams {

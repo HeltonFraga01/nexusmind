@@ -138,6 +138,35 @@ func (h *APIKeyHandler) GetByID(c *gin.Context) {
 	response.Success(c, dto.APIKeyFromService(key))
 }
 
+// Reveal handles explicitly revealing an API key secret
+// POST /api/v1/api-keys/:id/reveal
+func (h *APIKeyHandler) Reveal(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	keyID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid key ID")
+		return
+	}
+
+	key, err := h.apiKeyService.GetByID(c.Request.Context(), keyID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	if key.UserID != subject.UserID {
+		response.Forbidden(c, "Not authorized to access this key")
+		return
+	}
+
+	response.Success(c, dto.APIKeyCreateResponseFromService(key))
+}
+
 // Create handles creating a new API key
 // POST /api/v1/api-keys
 func (h *APIKeyHandler) Create(c *gin.Context) {
@@ -179,7 +208,7 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 		if err != nil {
 			return nil, err
 		}
-		return dto.APIKeyFromService(key), nil
+		return dto.APIKeyCreateResponseFromService(key), nil
 	})
 }
 

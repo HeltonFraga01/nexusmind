@@ -21,6 +21,8 @@ func TestAPIKeyFromService_MapsLastUsedAt(t *testing.T) {
 
 	out := APIKeyFromService(src)
 	require.NotNil(t, out)
+	require.Equal(t, MaskAPIKey(src.Key), out.Key)
+	require.NotEqual(t, src.Key, out.Key)
 	require.NotNil(t, out.LastUsedAt)
 	require.WithinDuration(t, lastUsed, *out.LastUsedAt, time.Second)
 }
