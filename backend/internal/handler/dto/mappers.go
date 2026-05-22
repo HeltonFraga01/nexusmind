@@ -80,7 +80,7 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 	out := &APIKey{
 		ID:            k.ID,
 		UserID:        k.UserID,
-		Key:           k.Key,
+		Key:           MaskAPIKey(k.Key),
 		Name:          k.Name,
 		GroupID:       k.GroupID,
 		Status:        k.Status,
@@ -117,6 +117,16 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		out.Reset7dAt = &t
 	}
 	return out
+}
+
+func APIKeyCreateResponseFromService(k *service.APIKey) *APIKeyCreateResponse {
+	if k == nil {
+		return nil
+	}
+	return &APIKeyCreateResponse{
+		APIKey: APIKeyFromService(k),
+		RawKey: k.Key,
+	}
 }
 
 func GroupFromServiceShallow(g *service.Group) *Group {

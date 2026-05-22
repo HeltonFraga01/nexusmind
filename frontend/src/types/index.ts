@@ -583,6 +583,11 @@ export interface ApiKey {
   reset_7d_at: string | null
 }
 
+export interface ApiKeySecretResponse {
+  api_key: ApiKey
+  raw_key: string
+}
+
 export interface CreateApiKeyRequest {
   name: string
   group_id?: number | null

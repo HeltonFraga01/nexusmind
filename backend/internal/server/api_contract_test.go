@@ -224,29 +224,32 @@ func TestAPIContracts(t *testing.T) {
 				"code": 0,
 				"message": "success",
 				"data": {
-					"id": 100,
-					"user_id": 1,
-					"key": "sk_custom_1234567890",
-					"name": "Key One",
-					"group_id": null,
-					"status": "active",
-					"ip_whitelist": null,
-					"ip_blacklist": null,
-					"last_used_at": null,
-					"quota": 0,
-					"quota_used": 0,
-					"rate_limit_5h": 0,
-					"rate_limit_1d": 0,
-					"rate_limit_7d": 0,
-					"usage_5h": 0,
-					"usage_1d": 0,
-					"usage_7d": 0,
-					"window_5h_start": null,
-					"window_1d_start": null,
-					"window_7d_start": null,
-					"expires_at": null,
-					"created_at": "2025-01-02T03:04:05Z",
-					"updated_at": "2025-01-02T03:04:05Z"
+					"api_key": {
+						"id": 100,
+						"user_id": 1,
+						"key": "sk_c***",
+						"name": "Key One",
+						"group_id": null,
+						"status": "active",
+						"ip_whitelist": null,
+						"ip_blacklist": null,
+						"last_used_at": null,
+						"quota": 0,
+						"quota_used": 0,
+						"rate_limit_5h": 0,
+						"rate_limit_1d": 0,
+						"rate_limit_7d": 0,
+						"usage_5h": 0,
+						"usage_1d": 0,
+						"usage_7d": 0,
+						"window_5h_start": null,
+						"window_1d_start": null,
+						"window_7d_start": null,
+						"expires_at": null,
+						"created_at": "2025-01-02T03:04:05Z",
+						"updated_at": "2025-01-02T03:04:05Z"
+					},
+					"raw_key": "sk_custom_1234567890"
 				}
 			}`,
 		},
@@ -275,7 +278,7 @@ func TestAPIContracts(t *testing.T) {
 						{
 							"id": 100,
 							"user_id": 1,
-							"key": "sk_custom_1234567890",
+							"key": "sk_c***",
 							"name": "Key One",
 							"group_id": null,
 							"status": "active",
@@ -1010,7 +1013,7 @@ func TestAPIContracts(t *testing.T) {
 					"google_oauth_client_secret_configured": false,
 					"google_oauth_redirect_url": "",
 					"google_oauth_frontend_redirect_url": "/auth/oauth/callback",
-					"site_name": "Sub2API",
+					"site_name": "NexusMind",
 					"site_logo": "",
 					"site_subtitle": "Subscription to API Conversion Platform",
 					"api_base_url": "",
@@ -1290,6 +1293,7 @@ func newContractDeps(t *testing.T) *contractDeps {
 	v1Keys.Use(jwtAuth)
 	v1Keys.GET("/keys", apiKeyHandler.List)
 	v1Keys.POST("/keys", apiKeyHandler.Create)
+	v1Keys.POST("/keys/:id/reveal", apiKeyHandler.Reveal)
 	v1Keys.GET("/groups/available", apiKeyHandler.GetAvailableGroups)
 
 	v1Usage := v1.Group("")

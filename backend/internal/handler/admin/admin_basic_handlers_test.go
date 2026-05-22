@@ -125,6 +125,16 @@ func TestUserHandlerEndpoints(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/users/1/api-keys", nil)
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
+	var userKeysResp struct {
+		Data struct {
+			Items []struct {
+				Key string `json:"key"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &userKeysResp))
+	require.Len(t, userKeysResp.Data.Items, 1)
+	require.Equal(t, "sk-t***", userKeysResp.Data.Items[0].Key)
 
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/users/1/usage?period=today", nil)
@@ -205,6 +215,16 @@ func TestGroupHandlerEndpoints(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/groups/2/api-keys", nil)
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
+	var groupKeysResp struct {
+		Data struct {
+			Items []struct {
+				Key string `json:"key"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &groupKeysResp))
+	require.Len(t, groupKeysResp.Data.Items, 1)
+	require.Equal(t, "sk-t***", groupKeysResp.Data.Items[0].Key)
 }
 
 func TestProxyHandlerEndpoints(t *testing.T) {

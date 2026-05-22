@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './client'
-import type { ApiKey, CreateApiKeyRequest, UpdateApiKeyRequest, PaginatedResponse } from '@/types'
+import type { ApiKey, ApiKeySecretResponse, CreateApiKeyRequest, UpdateApiKeyRequest, PaginatedResponse } from '@/types'
 
 /**
  * List all API keys for current user
@@ -55,7 +55,7 @@ export async function getById(id: number): Promise<ApiKey> {
  * @param quota - Optional quota limit in USD (0 = unlimited)
  * @param expiresInDays - Optional days until expiry (undefined = never expires)
  * @param rateLimitData - Optional rate limit fields
- * @returns Created API key
+ * @returns Created API key with show-once raw secret
  */
 export async function create(
   name: string,
@@ -66,7 +66,7 @@ export async function create(
   quota?: number,
   expiresInDays?: number,
   rateLimitData?: { rate_limit_5h?: number; rate_limit_1d?: number; rate_limit_7d?: number }
-): Promise<ApiKey> {
+): Promise<ApiKeySecretResponse> {
   const payload: CreateApiKeyRequest = { name }
   if (groupId !== undefined) {
     payload.group_id = groupId
@@ -96,7 +96,12 @@ export async function create(
     payload.rate_limit_7d = rateLimitData.rate_limit_7d
   }
 
-  const { data } = await apiClient.post<ApiKey>('/keys', payload)
+  const { data } = await apiClient.post<ApiKeySecretResponse>('/keys', payload)
+  return data
+}
+
+export async function reveal(id: number): Promise<ApiKeySecretResponse> {
+  const { data } = await apiClient.post<ApiKeySecretResponse>(`/keys/${id}/reveal`)
   return data
 }
 
@@ -135,6 +140,7 @@ export const keysAPI = {
   list,
   getById,
   create,
+  reveal,
   update,
   delete: deleteKey,
   toggleStatus
