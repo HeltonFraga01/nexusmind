@@ -925,8 +925,8 @@
       :show="showUseKeyModal"
       :api-key="selectedKeySecret"
       :base-url="publicSettings?.api_base_url || ''"
-      :platform="selectedKey?.group?.platform || null"
-      :allow-messages-dispatch="selectedKey?.group?.allow_messages_dispatch || false"
+      :platform="selectedKeyPlatform"
+      :allow-messages-dispatch="selectedKeyAllowMessagesDispatch"
       @close="closeUseKeyModal"
     />
 
@@ -1370,6 +1370,16 @@ const hydrateApiKeyGroup = (key: ApiKey): ApiKey => {
   return group ? { ...key, group } : key
 }
 
+const selectedKeyGroup = computed(() => {
+  if (!selectedKey.value) return null
+  if (selectedKey.value.group) return selectedKey.value.group
+  if (selectedKey.value.group_id == null) return null
+  return groups.value.find((item) => item.id === selectedKey.value?.group_id) || null
+})
+
+const selectedKeyPlatform = computed(() => selectedKeyGroup.value?.platform || null)
+const selectedKeyAllowMessagesDispatch = computed(() => selectedKeyGroup.value?.allow_messages_dispatch || false)
+
 const openUseKeyModal = async (key: ApiKey) => {
   try {
     const revealed = await keysAPI.reveal(key.id)
@@ -1592,7 +1602,7 @@ const handleSubmit = async () => {
       if (onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) {
         onboardingStore.nextStep(500)
       }
-      closeModals()
+      closeFormModals()
       showUseKeyModal.value = true
     }
     loadApiKeys()
@@ -1625,10 +1635,7 @@ const handleDelete = async () => {
   }
 }
 
-const closeModals = () => {
-  showCreateModal.value = false
-  showEditModal.value = false
-  selectedKey.value = null
+const resetFormData = () => {
   formData.value = {
     name: '',
     group_id: null,
@@ -1648,6 +1655,19 @@ const closeModals = () => {
     expiration_preset: '30',
     expiration_date: ''
   }
+}
+
+const closeModals = () => {
+  showCreateModal.value = false
+  showEditModal.value = false
+  selectedKey.value = null
+  resetFormData()
+}
+
+const closeFormModals = () => {
+  showCreateModal.value = false
+  showEditModal.value = false
+  resetFormData()
 }
 
 // Show reset quota confirmation dialog
