@@ -1364,8 +1364,11 @@ const loadPublicSettings = async () => {
   }
 }
 
-const hydrateApiKeyGroup = (key: ApiKey): ApiKey => {
+const hydrateApiKeyGroup = (key: ApiKey, fallbackKey?: ApiKey): ApiKey => {
   if (key.group || key.group_id == null) return key
+  if (fallbackKey?.group && fallbackKey.group_id === key.group_id) {
+    return { ...key, group: fallbackKey.group }
+  }
   const group = groups.value.find((item) => item.id === key.group_id)
   return group ? { ...key, group } : key
 }
@@ -1373,7 +1376,7 @@ const hydrateApiKeyGroup = (key: ApiKey): ApiKey => {
 const openUseKeyModal = async (key: ApiKey) => {
   try {
     const revealed = await keysAPI.reveal(key.id)
-    selectedKey.value = hydrateApiKeyGroup(revealed.api_key)
+    selectedKey.value = hydrateApiKeyGroup(revealed.api_key, key)
     selectedKeySecret.value = revealed.raw_key
     showUseKeyModal.value = true
   } catch (error: any) {
