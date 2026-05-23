@@ -1365,10 +1365,20 @@ const loadPublicSettings = async () => {
 }
 
 const hydrateApiKeyGroup = (key: ApiKey, fallbackKey?: ApiKey): ApiKey => {
-  if (key.group || key.group_id == null) return key
-  if (fallbackKey?.group && fallbackKey.group_id === key.group_id) {
-    return { ...key, group: fallbackKey.group }
+  if (key.group) return key
+
+  // Fallback para a linha clicada: o usuário já está vendo esse group na tabela.
+  // Isso evita falso negativo quando /reveal omite `group` (ou retorna group_id nulo/inconsistente).
+  if (fallbackKey?.group) {
+    return {
+      ...key,
+      group: fallbackKey.group,
+      group_id: key.group_id ?? fallbackKey.group_id ?? fallbackKey.group.id
+    }
   }
+
+  if (key.group_id == null) return key
+
   const group = groups.value.find((item) => item.id === key.group_id)
   return group ? { ...key, group } : key
 }
