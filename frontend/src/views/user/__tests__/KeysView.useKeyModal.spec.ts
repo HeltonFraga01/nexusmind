@@ -75,14 +75,18 @@ vi.mock('@/composables/useClipboard', () => ({
   useClipboard: () => ({ copyToClipboard })
 }))
 
-vi.mock('vue-i18n', () => ({
-  useI18n: () => ({
-    t: (key: string) =>
-      ({
-        'keys.useKey': 'Use Key'
-      })[key] ?? key
-  })
-}))
+vi.mock('vue-i18n', async () => {
+  const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
+  return {
+    ...actual,
+    useI18n: () => ({
+      t: (key: string) =>
+        ({
+          'keys.useKey': 'Use Key'
+        })[key] ?? key
+    })
+  }
+})
 
 const AppLayoutStub = { template: '<div><slot /></div>' }
 const TablePageLayoutStub = {
@@ -113,20 +117,38 @@ const EndpointPopoverStub = { template: '<div />' }
 const GroupBadgeStub = { template: '<div />' }
 const GroupOptionItemStub = { template: '<div />' }
 
-vi.mock('@/components/layout/AppLayout.vue', () => ({ default: AppLayoutStub }))
-vi.mock('@/components/layout/TablePageLayout.vue', () => ({ default: TablePageLayoutStub }))
-vi.mock('@/components/common/DataTable.vue', () => ({ default: DataTableStub }))
-vi.mock('@/components/common/EmptyState.vue', () => ({ default: EmptyStateStub }))
-vi.mock('@/components/common/Pagination.vue', () => ({ default: PaginationStub }))
-vi.mock('@/components/common/BaseDialog.vue', () => ({ default: BaseDialogStub }))
-vi.mock('@/components/common/ConfirmDialog.vue', () => ({ default: ConfirmDialogStub }))
-vi.mock('@/components/common/Select.vue', () => ({ default: SelectStub }))
-vi.mock('@/components/common/SearchInput.vue', () => ({ default: SearchInputStub }))
-vi.mock('@/components/icons/Icon.vue', () => ({ default: IconStub }))
-vi.mock('@/components/keys/UseKeyModal.vue', () => ({ default: UseKeyModalStub }))
-vi.mock('@/components/keys/EndpointPopover.vue', () => ({ default: EndpointPopoverStub }))
-vi.mock('@/components/common/GroupBadge.vue', () => ({ default: GroupBadgeStub }))
-vi.mock('@/components/common/GroupOptionItem.vue', () => ({ default: GroupOptionItemStub }))
+vi.mock('@/components/layout/AppLayout.vue', () => ({ default: { template: '<div><slot /></div>' } }))
+vi.mock('@/components/layout/TablePageLayout.vue', () => ({
+  default: { template: '<div><slot name="actions" /><slot name="filters" /><slot name="table" /></div>' }
+}))
+vi.mock('@/components/common/DataTable.vue', () => ({
+  default: {
+    props: ['data'],
+    template: `
+      <div>
+        <div v-for="row in data" :key="row.id">
+          <slot name="cell-actions" :row="row" />
+        </div>
+      </div>
+    `
+  }
+}))
+vi.mock('@/components/common/EmptyState.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/common/Pagination.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/common/BaseDialog.vue', () => ({ default: { template: '<div><slot /><slot name="footer" /></div>' } }))
+vi.mock('@/components/common/ConfirmDialog.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/common/Select.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/common/SearchInput.vue', () => ({ default: { template: '<input />' } }))
+vi.mock('@/components/icons/Icon.vue', () => ({ default: { template: '<span />' } }))
+vi.mock('@/components/keys/UseKeyModal.vue', () => ({
+  default: {
+    props: ['show', 'apiKey', 'baseUrl', 'platform', 'allowMessagesDispatch'],
+    template: '<div v-if="show" data-testid="use-key-modal">{{ platform || \'no-platform\' }}</div>'
+  }
+}))
+vi.mock('@/components/keys/EndpointPopover.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/common/GroupBadge.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/common/GroupOptionItem.vue', () => ({ default: { template: '<div />' } }))
 
 const group = {
   id: 7,
