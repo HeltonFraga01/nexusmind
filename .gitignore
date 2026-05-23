@@ -143,3 +143,8 @@ output/
 config.yaml
 .installed
 data/
+
+# ===================
+# Local tooling / scratch (antigravity + portainer scripts)
+# ===================
+scratch/
