@@ -1364,10 +1364,16 @@ const loadPublicSettings = async () => {
   }
 }
 
+const hydrateApiKeyGroup = (key: ApiKey): ApiKey => {
+  if (key.group || key.group_id == null) return key
+  const group = groups.value.find((item) => item.id === key.group_id)
+  return group ? { ...key, group } : key
+}
+
 const openUseKeyModal = async (key: ApiKey) => {
   try {
     const revealed = await keysAPI.reveal(key.id)
-    selectedKey.value = revealed.api_key
+    selectedKey.value = hydrateApiKeyGroup(revealed.api_key)
     selectedKeySecret.value = revealed.raw_key
     showUseKeyModal.value = true
   } catch (error: any) {
@@ -1580,7 +1586,7 @@ const handleSubmit = async () => {
         expiresInDays,
         rateLimitData
       )
-      selectedKey.value = created.api_key
+      selectedKey.value = hydrateApiKeyGroup(created.api_key)
       selectedKeySecret.value = created.raw_key
       appStore.showSuccess(t('keys.keyCreatedSuccess'))
       if (onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) {
