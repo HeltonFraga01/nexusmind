@@ -93,12 +93,10 @@ def get_running_omniroute_version():
 
         image = service.get("Spec", {}).get("TaskTemplate", {}).get("ContainerSpec", {}).get("Image", "")
         print(f"[*] Found image in Portainer spec: {image}")
-        if ":" in image:
-            tag = image.split(":")[-1]
-            # Strip @sha256 if present
-            if "@" in tag:
-                tag = tag.split("@")[0]
-            return tag
+        # Strip @sha256 digest first if present
+        image_no_digest = image.split("@")[0]
+        if ":" in image_no_digest:
+            return image_no_digest.split(":")[-1]
     except Exception as e:
         print(f"[!] Failed to get OmniRoute version from Portainer: {e}")
     return None
