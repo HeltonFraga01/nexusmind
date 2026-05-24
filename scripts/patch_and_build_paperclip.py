@@ -166,8 +166,17 @@ def apply_code_patches(directory):
         '"https://api.anthropic.com"': 'process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"',
         "'https://api.anthropic.com'": "process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'",
         '"https://api.openai.com"': 'process.env.OPENAI_BASE_URL || "https://api.openai.com"',
-        "'https://api.openai.com'": "process.env.OPENAI_BASE_URL || 'https://api.openai.com'"
+        "'https://api.openai.com'": "process.env.OPENAI_BASE_URL || 'https://api.openai.com'",
+        '"https://api.anthropic.com/v1/messages"': '(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com") + "/v1/messages"',
+        "'https://api.anthropic.com/v1/messages'": "(process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com') + '/v1/messages'",
+        '"https://api.anthropic.com/api/oauth/usage"': '(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com") + "/api/oauth/usage"',
+        "'https://api.anthropic.com/api/oauth/usage'": "(process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com') + '/api/oauth/usage'",
+        '"https://api.openai.com/v1/models"': '(process.env.OPENAI_BASE_URL || "https://api.openai.com") + "/v1/models"',
+        "'https://api.openai.com/v1/models'": "(process.env.OPENAI_BASE_URL || 'https://api.openai.com') + '/v1/models'",
+        '"https://chatgpt.com/backend-api/wham/usage"': '(process.env.CHATGPT_WHAM_USAGE_URL || (process.env.OPENAI_BASE_URL ? (process.env.OPENAI_BASE_URL.endsWith("/v1") ? process.env.OPENAI_BASE_URL.slice(0, -3) : process.env.OPENAI_BASE_URL) + "/backend-api/wham/usage" : "https://chatgpt.com/backend-api/wham/usage"))',
+        "'https://chatgpt.com/backend-api/wham/usage'": "(process.env.CHATGPT_WHAM_USAGE_URL || (process.env.OPENAI_BASE_URL ? (process.env.OPENAI_BASE_URL.endsWith('/v1') ? process.env.OPENAI_BASE_URL.slice(0, -3) : process.env.OPENAI_BASE_URL) + '/backend-api/wham/usage' : 'https://chatgpt.com/backend-api/wham/usage'))",
     }
+
 
     count = 0
     for root, dirs, files in os.walk(directory):
