@@ -159,7 +159,7 @@ def run_cmd(args, cwd=None, check=True):
 def apply_code_patches(directory):
     """
     Recursively walk the cloned repo and replace hardcoded Anthropic/OpenAI API URLs
-    with environment variables.
+    with environment variables. Also inject custom config generation for Codex and OpenCode.
     """
     print(f"[*] Applying environment patches recursively to {directory}...")
     replacements = {
@@ -176,7 +176,6 @@ def apply_code_patches(directory):
         '"https://chatgpt.com/backend-api/wham/usage"': '(process.env.CHATGPT_WHAM_USAGE_URL || (process.env.OPENAI_BASE_URL ? (process.env.OPENAI_BASE_URL.endsWith("/v1") ? process.env.OPENAI_BASE_URL.slice(0, -3) : process.env.OPENAI_BASE_URL) + "/backend-api/wham/usage" : "https://chatgpt.com/backend-api/wham/usage"))',
         "'https://chatgpt.com/backend-api/wham/usage'": "(process.env.CHATGPT_WHAM_USAGE_URL || (process.env.OPENAI_BASE_URL ? (process.env.OPENAI_BASE_URL.endsWith('/v1') ? process.env.OPENAI_BASE_URL.slice(0, -3) : process.env.OPENAI_BASE_URL) + '/backend-api/wham/usage' : 'https://chatgpt.com/backend-api/wham/usage'))",
     }
-
 
     count = 0
     for root, dirs, files in os.walk(directory):
@@ -207,6 +206,187 @@ def apply_code_patches(directory):
                     count += 1
             except Exception as e:
                 print(f"  [!] Failed to patch file {filepath}: {e}")
+
+    # 1. Custom dynamic config.toml patch for packages/adapters/codex-local/src/server/codex-home.ts
+    codex_home_path = os.path.join(directory, "packages/adapters/codex-local/src/server/codex-home.ts")
+    if os.path.exists(codex_home_path):
+        print("  [+] Injecting dynamic config.toml writer patch into codex-home.ts...")
+        try:
+            with open(codex_home_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            target_block = """  if (apiKey) {
+    await writeApiKeyAuthJson(targetHome, apiKey);
+    await onLog(
+      "stdout",
+      `[paperclip] Wrote API-key auth.json into Codex home "${targetHome}" from configured OPENAI_API_KEY.\\n`,
+    );
+  }
+
+  return targetHome;"""
+
+            replacement_block = """  if (apiKey) {
+    await writeApiKeyAuthJson(targetHome, apiKey);
+    await onLog(
+      "stdout",
+      `[paperclip] Wrote API-key auth.json into Codex home "${targetHome}" from configured OPENAI_API_KEY.\\n`,
+    );
+  }
+
+  // Inject custom config.toml for NexusMind / Sub2API dynamic routing (with websockets support!)
+  const openaiBaseUrl = env.OPENAI_BASE_URL || env.CODEX_BASE_URL || "https://nexusmind.digital/v1";
+  const normalizedBaseUrl = openaiBaseUrl.replace(/\\/v1\\/?$/, "");
+  const defaultModel = env.CODEX_MODEL || env.OPENAI_MODEL || "gpt-5.4";
+  const configTomlContent = `
+model_provider = "OpenAI"
+model = "${defaultModel}"
+review_model = "${defaultModel}"
+model_reasoning_effort = "xhigh"
+disable_response_storage = true
+network_access = "enabled"
+windows_wsl_setup_acknowledged = true
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
+
+[model_providers.OpenAI]
+name = "OpenAI"
+base_url = "${normalizedBaseUrl}"
+wire_api = "responses"
+supports_websockets = true
+requires_openai_auth = true
+
+[features]
+responses_websockets_v2 = true
+`.trim();
+
+  await fs.writeFile(path.join(targetHome, "config.toml"), configTomlContent, "utf8");
+  await onLog(
+    "stdout",
+    `[paperclip] Wrote custom dynamic config.toml with base_url="${normalizedBaseUrl}" and model="${defaultModel}" into Codex home "${targetHome}".\\n`
+  );
+
+  return targetHome;"""
+
+            if target_block in content:
+                content = content.replace(target_block, replacement_block)
+                with open(codex_home_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print("  [+] codex-home.ts successfully patched with dynamic config.toml generator!")
+                count += 1
+            else:
+                print("  [!] Target block not found in codex-home.ts!")
+        except Exception as e:
+            print(f"  [!] Failed to patch codex-home.ts: {e}")
+
+    # 2. Custom dynamic opencode.json patch for packages/adapters/opencode-local/src/server/runtime-config.ts
+    opencode_config_path = os.path.join(directory, "packages/adapters/opencode-local/src/server/runtime-config.ts")
+    if os.path.exists(opencode_config_path):
+        print("  [+] Injecting dynamic opencode.json generator patch into runtime-config.ts...")
+        try:
+            with open(opencode_config_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            target_block = """  const existingConfig = await readJsonObject(runtimeConfigPath);
+  const existingPermission = isPlainObject(existingConfig.permission)
+    ? existingConfig.permission
+    : {};
+  const nextConfig = {
+    ...existingConfig,
+    permission: {
+      ...existingPermission,
+      external_directory: "allow",
+    },
+  };"""
+
+            replacement_block = """  const existingConfig = await readJsonObject(runtimeConfigPath);
+  const existingPermission = isPlainObject(existingConfig.permission)
+    ? existingConfig.permission
+    : {};
+
+  // Inject dynamic local OpenAI / NexusMind provider config
+  const openaiBaseUrl = input.env.OPENAI_BASE_URL || input.env.CODEX_BASE_URL || "https://nexusmind.digital/v1";
+  const openaiApiKey = input.env.OPENAI_API_KEY || input.env.CODEX_API_KEY || "sk-dummy";
+  
+  const providerConfig = {
+    openai: {
+      options: {
+        baseURL: openaiBaseUrl,
+        apiKey: openaiApiKey
+      },
+      models: {
+        "gpt-5.2": {
+          name: "GPT-5.2",
+          limit: { context: 400000, output: 128000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {}, xhigh: {} }
+        },
+        "gpt-5.5": {
+          name: "GPT-5.5",
+          limit: { context: 1050000, output: 128000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {}, xhigh: {} }
+        },
+        "gpt-5.4": {
+          name: "GPT-5.4",
+          limit: { context: 1050000, output: 128000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {}, xhigh: {} }
+        },
+        "gpt-5.4-mini": {
+          name: "GPT-5.4 Mini",
+          limit: { context: 400000, output: 128000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {}, xhigh: {} }
+        },
+        "gpt-5.3-codex-spark": {
+          name: "GPT-5.3 Codex Spark",
+          limit: { context: 128000, output: 32000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {}, xhigh: {} }
+        },
+        "gpt-5.3-codex": {
+          name: "GPT-5.3 Codex",
+          limit: { context: 400000, output: 128000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {}, xhigh: {} }
+        },
+        "codex-mini-latest": {
+          name: "Codex Mini",
+          limit: { context: 200000, output: 100000 },
+          options: { store: false },
+          variants: { low: {}, medium: {}, high: {} }
+        }
+      }
+    }
+  };
+
+  const nextConfig = {
+    ...existingConfig,
+    provider: {
+      ...isPlainObject(existingConfig.provider) ? existingConfig.provider : {},
+      ...providerConfig
+    },
+    permission: {
+      ...existingPermission,
+      external_directory: "allow",
+    },
+    agent: {
+      build: { options: { store: false } },
+      plan: { options: { store: false } }
+    },
+    $schema: "https://opencode.ai/config.json"
+  };"""
+
+            if target_block in content:
+                content = content.replace(target_block, replacement_block)
+                with open(opencode_config_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print("  [+] runtime-config.ts successfully patched with dynamic opencode.json generator!")
+                count += 1
+            else:
+                print("  [!] Target block not found in runtime-config.ts!")
+        except Exception as e:
+            print(f"  [!] Failed to patch runtime-config.ts: {e}")
 
     print(f"[+] Patch application finished. Modified {count} files.")
     return count
