@@ -3,18 +3,33 @@
 Fork **estruturado** de [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api).
 Objetivo: trazer novas versões do upstream com `git merge` sem quebrar as melhorias.
 
-## Princípio
+## ⚠️ Regra de Ouro: Princípio da Alteração Mínima (Minimal Change Principle)
 
-Só **duas** coisas exigem código: tradução **pt-BR** e o provedor de pagamento
-**Ciabra PIX**. Home page e branding são **configuração no painel admin**, não fork
-de código (ver seção "Home e branding via admin").
+> [!IMPORTANT]
+> **Fazer o mínimo de mudança de código possível é a nossa prioridade absoluta.**
+> 
+> **Por que fazemos isso?**
+> Para permitir que novas versões, patches de segurança e melhorias do repositório original (*upstream* `Wei-Shaw/sub2api`) sejam integrados perfeitamente com um simples `git merge upstream/main`, sem gerar conflitos complexos de código e mantendo a stack ultra-estável e fácil de manter.
+> 
+> ### Diretrizes Obrigatórias:
+> 1. **Home e Branding via Admin (Sem Código)**:
+>    O layout, logotipo, cores, banners e todo o conteúdo da landing page (`Home Content`) são configurados dinamicamente via painel de administração em **Admin → Settings**, e **nunca** por modificação direta do código Vue.
+> 2. **Somente Duas Coisas Exigem Código**:
+>    - A tradução e internacionalização **pt-BR** (em arquivos isolados).
+>    - O provedor de pagamento brasileiro **Ciabra PIX**.
+> 3. **Marcador Obrigatório (`nexusmind`)**:
+>    Toda linha de código adicionada ou modificada em arquivos originais do upstream deve, sem exceção, levar o comentário com o marcador correspondente:
+>    - `// nexusmind` (Go, TypeScript, JavaScript)
+>    - `/* nexusmind */` (CSS, Go, JS)
+>    - `<!-- nexusmind -->` (HTML, Vue templates)
+>    
+>    Você pode auditar todas as customizações a qualquer momento executando:
+>    ```bash
+>    grep -rn "nexusmind" backend frontend
+>    ```
+> 4. **Surgical Patches (Patches Cirúrgicos)**:
+>    Para alterações de infraestrutura e dependências externas (como o patch do container do Paperclip), priorize o uso de scripts de build ou patches dinâmicos em vez de modificar arquivos estáticos do core.
 
-Toda linha adicionada a um arquivo do upstream leva o marcador `nexusmind`
-(`// nexusmind`, `/* nexusmind */` ou `<!-- nexusmind -->`). Auditar com:
-
-```bash
-grep -rn "nexusmind" backend frontend
-```
 
 ## Estrutura
 

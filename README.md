@@ -34,6 +34,23 @@ Demo credentials (shared demo environment; **not** created automatically for sel
 
 Sub2API is an AI API gateway platform designed to distribute and manage API quotas from AI product subscriptions. Users can access upstream AI services through platform-generated API Keys, while the platform handles authentication, billing, load balancing, and request forwarding.
 
+---
+
+## ⚠️ Regra de Ouro: Princípio da Alteração Mínima (Minimal Change Principle)
+
+> [!IMPORTANT]
+> **Fazer o mínimo de mudança de código possível!**
+> 
+> Para manter a compatibilidade perfeita com o repositório original (*upstream* `Wei-Shaw/sub2api`) e permitir atualizações limpas e rápidas via `git merge upstream/main`:
+> 
+> 1. **Branding e Home Page via Admin**: Não modifique código para mudar a logo, cores, títulos ou layout da página inicial. Use as configurações administrativas do painel (`Site Name`, `Site Logo`, `Home Content` etc.).
+> 2. **Somente Duas Coisas Exigem Código**: 
+>    - Tradução **pt-BR** (localizada em arquivos dedicados).
+>    - Integração de pagamento **Ciabra PIX**.
+> 3. **Marcador Obrigatório**: Qualquer linha adicionada ou modificada nos arquivos vindos do upstream DEVE conter o comentário `// nexusmind`, `/* nexusmind */` ou `<!-- nexusmind -->`.
+> 4. **Surgical Patches**: Se for necessário corrigir comportamentos de agentes (como o patch do Paperclip), aplique alterações dinâmicas e cirúrgicas via scripts de patch em vez de reescrever grandes trechos de código.
+
+
 ## Features
 
 - **Multi-Account Management** - Support multiple upstream account types (OAuth, API Key)
@@ -111,12 +128,6 @@ Register now via <a href="https://pateway.ai/?ch=1tsfr51">this link</a> to recei
 <tr>
 <td width="180"><a href="https://api.pptoken.org/register?promo=SUB2API"><img src="assets/partners/logos/pptoken.png" alt="pptoken" width="150"></a></td>
 <td>Thanks to PPToken.org for sponsoring this project! <a href="https://api.pptoken.org/register?promo=SUB2API">PPToken.org</a> specializes in GPT model API relay services, supporting Codex, Claude Code, OpenAI-compatible clients, and Gemini CLI integration. Top-ups are 1:1 (¥1 = $1 credit); GPT models start at 0.16x rate multiplier, with overall cost at roughly 2.2% of official pricing and first-token latency around 1 second — ideal for developers seeking low-cost, high-speed access to GPT model capabilities. Technical support: 24/7 real human responses (no bots), @tech in the group chat and get a reply within 10 minutes. Sponsor benefit: the first 200 users who register via the <a href="https://api.pptoken.org/register?promo=SUB2API">exclusive registration link</a> and enter promo code `SUB2API` can claim free Codex / Claude Code trial credits — no minimum spend, no card required.
-</td>
-</tr>
-
-<tr>
-<td width="180"><a href="https://runapi.co/register?aff=fu2E"><img src="assets/partners/logos/runapi.png" alt="RunAPI" width="150"></a></td>
-<td>Thanks to RunAPI for sponsoring this project! <a href="https://runapi.co/register?aff=fu2E">RunAPI</a> is an efficient and stable API platform and OpenRouter alternative. With one API Key, you can access 150+ popular models including OpenAI, Claude, Gemini, DeepSeek, and Grok, with pricing as low as 10% of the original rate. It is highly stable and seamlessly compatible with tools such as Claude Code and OpenClaw.
 </td>
 </tr>
 
