@@ -1378,7 +1378,6 @@ const hydrateApiKeyGroup = (key: ApiKey, fallbackKey?: ApiKey): ApiKey => {
   }
 
   if (key.group_id == null) return key
-
   const group = groups.value.find((item) => item.id === key.group_id)
   return group ? { ...key, group } : key
 }
