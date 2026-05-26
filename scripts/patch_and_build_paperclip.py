@@ -388,6 +388,50 @@ responses_websockets_v2 = true
         except Exception as e:
             print(f"  [!] Failed to patch runtime-config.ts: {e}")
 
+    # 3. Patch Dockerfile to install hermes-agent CLI + hermes-paperclip-adapter
+    # Root cause: hermes_local adapter needs (a) the `hermes` Python binary in PATH
+    # and (b) the hermes-paperclip-adapter npm package resolvable from /app/node_modules.
+    # `npm install --prefix /app` fails due to pnpm workspace config; isolated dir + symlink works.
+    dockerfile_path = os.path.join(directory, "Dockerfile")
+    if os.path.exists(dockerfile_path):
+        print("  [+] Patching Dockerfile to install hermes-agent + hermes-paperclip-adapter...")
+        try:
+            with open(dockerfile_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            if "hermes-paperclip-adapter" in content:
+                print("  [=] Dockerfile already has hermes-paperclip-adapter, skipping.")
+            else:
+                # Step 1: Clear npm cache + add python3-pip to the existing apt-get install line
+                # npm cache clean --force frees space for apt-get inside the build container
+                target_apt = "npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai \\\n  && apt-get update \\\n  && apt-get install -y --no-install-recommends openssh-client jq"
+                replacement_apt = "npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai \\\n  && npm cache clean --force \\\n  && apt-get update \\\n  && apt-get install -y --no-install-recommends openssh-client jq python3-pip"
+
+                # Step 2: After the chown line, append hermes-agent pip install + adapter symlink
+                target_chown = "  && chown node:node /paperclip"
+                replacement_chown = (
+                    "  && chown node:node /paperclip\n"
+                    "# Install hermes CLI (Python) — provides the `hermes` binary used by hermes_local adapter\n"
+                    "RUN pip install --break-system-packages hermes-agent anthropic openai\n"
+                    "# Install hermes-paperclip-adapter in isolated dir and symlink into /app/node_modules\n"
+                    "RUN mkdir -p /tmp/hermes-install && cd /tmp/hermes-install && \\\n"
+                    "    npm install hermes-paperclip-adapter@latest && \\\n"
+                    "    ln -sf /tmp/hermes-install/node_modules/hermes-paperclip-adapter /app/node_modules/hermes-paperclip-adapter && \\\n"
+                    "    ln -sf /tmp/hermes-install/node_modules/picocolors /app/node_modules/picocolors || true"
+                )
+
+                if target_apt in content and target_chown in content:
+                    content = content.replace(target_apt, replacement_apt)
+                    content = content.replace(target_chown, replacement_chown)
+                    with open(dockerfile_path, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    print("  [+] Dockerfile patched: python3-pip + hermes-agent + hermes-paperclip-adapter added!")
+                    count += 1
+                else:
+                    print("  [!] Target lines not found in Dockerfile, skipping hermes patch.")
+        except Exception as e:
+            print(f"  [!] Failed to patch Dockerfile: {e}")
+
     print(f"[+] Patch application finished. Modified {count} files.")
     return count
 
