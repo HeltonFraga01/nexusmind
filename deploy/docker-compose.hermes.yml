@@ -1,0 +1,282 @@
+version: "3.8"
+
+# =============================================================================
+# Hermes Agent — Stack v6 (State-of-the-Art)
+# Deploy: Portainer Swarm | Stack ID: 345 | Stack Name: cortexx-hermes
+#
+# REGRA FUNDAMENTAL: Toda configuração é feita via ENVs desta stack.
+# NÃO há hardcodes nem scripts ad-hoc. O bootstrap lê dinamicamente as ENVs.
+# =============================================================================
+
+services:
+  hermes-agent:
+    image: heltonfraga/hermes-agent:amd64
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        cd /root/.hermes/hermes-agent
+
+        echo "[*] Checking essential Telegram and MCP packages in venv..."
+        if ! /root/.hermes/hermes-agent/venv/bin/python -c "import telegram" >/dev/null 2>&1; then
+          echo "[*] python-telegram-bot not found in venv. Installing quickly..."
+          /root/.hermes/hermes-agent/venv/bin/python -m pip install --no-cache-dir "python-telegram-bot>=20.0"
+        fi
+
+        if ! /root/.hermes/hermes-agent/venv/bin/python -c "import fastmcp" >/dev/null 2>&1; then
+          echo "[*] fastmcp not found in venv. Installing quickly..."
+          /root/.hermes/hermes-agent/venv/bin/python -m pip install --no-cache-dir "fastmcp>=2.0"
+        fi
+
+        # Fast editable install without bulky audio packages ([all])
+        echo "[*] Ensuring core hermes-agent is installed editably..."
+        /root/.hermes/hermes-agent/venv/bin/python -m pip install --no-cache-dir -e .
+
+        mkdir -p /opt/data/plans /opt/data/mcp /opt/data/skills /root/.hermes /workspace
+        find /opt/data /root/.hermes -maxdepth 3 \( -name config.yaml -o -name gateway.json -o -name .env \) -type f -delete 2>/dev/null || true
+
+        # Gerar o Guia de Auto-Compreensão de Capabilities do Hermes
+        cat > /opt/data/skills/hermes_capabilities_guide.md <<'GUIDE_EOF'
+        # Guia Estratégico de Capabilities e Auto-Compreensão - Hermes Agent
+
+        Este documento serve como a base de auto-compreensão e consciência situacional de você, **Hermes Agent**,
+        detalhando as capacidades do seu ecossistema de produção no Docker Swarm.
+        Leia e utilize este guia para entender a extensão das suas ferramentas e canais de integração.
+
+        ---
+
+        ## 🧠 1. Ecossistema de Memória e Cognição
+        Sua memória é persistente, cumulativa e estruturada em camadas cognitivas:
+        * **FTS5 SQLite Local**: Suas memórias de curto/médio prazo e histórico de sessões são persistidos
+          de forma nativa na base de dados SQLite em `/opt/data/state.db`.
+        * **Qdrant Vector Database**: Banco de vetores corporativo conectado internamente no host
+          `http://cortexx-qdrant_qdrant:6333`. Ele fornece buscas de similaridade de alta velocidade,
+          indexação semântica e suporte a fluxos avançados de RAG (Retrieval-Augmented Generation).
+        * **Honcho User Modeling**: Plataforma de modelagem cognitiva dialética para personalização
+          profunda de traços comportamentais e cognitivos do usuário.
+
+        ---
+
+        ## 🎙️ 2. Mídia, Transcrição e Busca Segura
+        Você está equipado com canais de mídia e web autohospedados e independentes de custos de API:
+        * **Whisper Speech-To-Text (ASR "Isper")**: Conectado na rede interna do Swarm no host
+          `http://cortexx-whisper_whisper:8000/v1` (porta 8000). Ele transcreve mensagens de voz do
+          Telegram de forma instantânea, local e offline, utilizando o modelo de alta performance e baixo
+          consumo de CPU carregado localmente no cache: **`Systran/faster-whisper-base`**.
+        * **SearXNG Search Local**: Mecanismo de busca local, gratuito e anônimo integrado no host
+          `http://cortexx-searxng_searxng:8080`. Ele permite que você pesquise na internet de forma
+          100% gratuita, sem requerer Tavily, Google ou Exa APIs.
+
+        ---
+
+        ## 🏗️ 3. Automação, Código e Execução Programática
+        Você possui ferramentas poderosas para resolver tarefas complexas e paralelas:
+        * **Cron Scheduler**: Permite agendar de forma nativa e em background tarefas periódicas ou
+          timers (`/cron add`), executando qualquer skill associada.
+        * **Delegação de Subagentes**: Permite a você spawnar child agents isolados (`delegate_task`)
+          com scopes reduzidos para paralelização e investigações profundas de código.
+        * **Programmatic Code Execution (`execute_code`)**: Permite rodar scripts Python de forma isolada
+          com acesso completo a RPC Tools, permitindo colapsar fluxos de dezenas de passos em uma única
+          rodada lógica.
+
+        ---
+
+        ## 🛡️ 4. Segurança e Fallback Automático (Contingência)
+        * **Modelo Primário**: Claude 3.5 Sonnet rodando no host do NexusMind
+          (`http://nexusmind_nexusmind:8080`).
+        * **Fallback/Contingência Definitiva**: Caso o primary falhe por falta de conexões do provedor,
+          você chaveará automaticamente de forma nativa para o modelo **`gpt-5.4`** via OpenAI no
+          NexusMind, garantindo resiliência absoluta e ininterrupta!
+        * **Dangerous Commands**: Comandos destrutivos de terminal (como exclusão de diretórios de sistema)
+          exigem aprovação explícita e passam por isolamento de container.
+
+        ---
+
+        ## 🔌 5. Ecossistema Corporativo de Integrações e Superpoderes
+        Você está inserido em uma infraestrutura corporativa extremamente rica. Utilize scripts Python
+        (`execute_code`) ou construa skills para interagir de forma autônoma com as seguintes ferramentas:
+
+        * **MinIO Object Storage** (`http://minio_minio:9000`): Armazenamento de arquivos de altíssima
+          velocidade. Você possui credenciais nativas no seu `.env` para ler e salvar mídias, datasets e
+          backups no bucket `hermes-artifacts`. Use a biblioteca Python `boto3` ou `minio` para manipulá-lo!
+        * **NocoDB Smart Spreadsheet** (`http://nocodb_nocodb:8080`): Uma planilha interativa no estilo
+          Airtable baseada em banco de dados SQL. Você pode estruturar tabelas de controle, cadastrar
+          contatos, fazer logs de tarefas ou ler e atualizar dados enviando requisições HTTP REST diretas!
+        * **Wuzapi WhatsApp API** (`http://wuzapi-cortexx_wuzapi-cortexx:8089`): Uma API de WhatsApp
+          robusta auto-hospedada. Você pode disparar alertas, notificações ou interagir com o WhatsApp
+          do usuário de forma autônoma!
+        * **n8n Workflow Automation** (`http://n8n_editor_n8n_editor:5678`): O motor visual de workflows
+          mais potente do mercado. Você pode disparar webhooks ou chamar pipelines de automação no n8n
+          que conectam centenas de serviços externos!
+        GUIDE_EOF
+
+        # Gerar config.yaml dinamicamente a partir das env vars da stack
+        cat > /opt/data/config.yaml <<CONFIG_EOF
+        model:
+          default: ${HERMES_MODEL_DEFAULT:-claude-sonnet-4-6}
+          provider: ${HERMES_MODEL_PROVIDER:-anthropic}
+          base_url: ${HERMES_MODEL_BASE_URL:-http://nexusmind_nexusmind:8080}
+          api_key: ${HERMES_MODEL_API_KEY}
+          context_length: 200000
+        fallback_model:
+          provider: ${HERMES_FALLBACK_PROVIDER:-openai}
+          model: ${HERMES_FALLBACK_MODEL:-gpt-5.4}
+          base_url: ${HERMES_FALLBACK_BASE_URL:-http://nexusmind_nexusmind:8080/v1}
+          api_key: ${HERMES_FALLBACK_API_KEY}
+        stt:
+          provider: ${STT_PROVIDER:-openai}
+          base_url: ${STT_OPENAI_BASE_URL:-http://cortexx-whisper_whisper:8000/v1}
+          api_key: ${VOICE_TOOLS_OPENAI_KEY}
+          openai:
+            model: ${STT_OPENAI_MODEL:-Systran/faster-whisper-base}
+        agent:
+          max_turns: 360
+          gateway_timeout: 1800
+          tool_use_enforcement: auto
+          verbose: false
+        telegram:
+          require_mention: false
+          allow_from:
+            - "${TELEGRAM_ALLOWED_USERS:-1870774374}"
+        mcp_servers:
+          dev_memory:
+            url: http://127.0.0.1:8092/mcp/
+            timeout: 30
+            connect_timeout: 10
+          graphiti:
+            url: http://cortexx-graphiti-mcp:8091/mcp/
+            timeout: 30
+            connect_timeout: 10
+        group_sessions_per_user: true
+        CONFIG_EOF
+
+        # Gerar .env dinamicamente a partir das env vars da stack
+        cat > /opt/data/.env <<ENV_EOF
+        ANTHROPIC_API_KEY=${HERMES_MODEL_API_KEY}
+        ANTHROPIC_BASE_URL=${HERMES_MODEL_BASE_URL}
+        OPENAI_API_KEY=${HERMES_FALLBACK_API_KEY}
+        OPENAI_BASE_URL=${HERMES_FALLBACK_BASE_URL}
+        STT_PROVIDER=${STT_PROVIDER}
+        STT_OPENAI_BASE_URL=${STT_OPENAI_BASE_URL}
+        VOICE_TOOLS_OPENAI_KEY=${VOICE_TOOLS_OPENAI_KEY}
+        STT_OPENAI_MODEL=${STT_OPENAI_MODEL}
+        SEARXNG_URL=${SEARXNG_URL}
+        QDRANT_URL=${QDRANT_URL}
+        TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+        TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+        CLAUDE_CODE_ATTRIBUTION_HEADER=0
+
+        # Superpoderes Corporativos v6
+        MINIO_ENDPOINT=${MINIO_ENDPOINT}
+        MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+        MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+        MINIO_BUCKET=${MINIO_BUCKET}
+        NOCODB_URL=${NOCODB_URL}
+        WUZAPI_URL=${WUZAPI_URL}
+        N8N_URL=${N8N_URL}
+        ENV_EOF
+
+        cp /opt/data/config.yaml /root/.hermes/config.yaml
+        cp /opt/data/.env /root/.hermes/.env
+
+        # Proxy FastMCP devmemory (obrigatorio para MCP JWT)
+        DEVMEMORY_HTTP_URL="http://cortexx-devmemory-mcp:8090" \
+        /root/.hermes/hermes-agent/venv/bin/fastmcp run /opt/data/mcp/devmemory_mcp_server.py \
+          --transport streamable-http --host 0.0.0.0 --port 8092 --path /mcp/ \
+          >/tmp/devmemory-mcp.log 2>&1 &
+        sleep 3
+
+        exec /root/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main gateway run
+    environment:
+      PYTHONUNBUFFERED: "1"
+      TZ: America/Sao_Paulo
+      HERMES_HOME: /opt/data
+
+      # ---------------------------------------------------------------------------
+      # Primary Model — Claude via NexusMind (Anthropic)
+      # ---------------------------------------------------------------------------
+      HERMES_MODEL_DEFAULT: claude-sonnet-4-6
+      HERMES_MODEL_PROVIDER: anthropic
+      HERMES_MODEL_BASE_URL: http://nexusmind_nexusmind:8080
+      # HERMES_MODEL_API_KEY: <configurado na seção de secrets do Portainer>
+
+      # ---------------------------------------------------------------------------
+      # Definitive Fallback Model — gpt-5.4 via NexusMind (OpenAI)
+      # Se o primary (Anthropic) falhar, o Hermes chaveará automaticamente aqui.
+      # ---------------------------------------------------------------------------
+      HERMES_FALLBACK_MODEL: gpt-5.4
+      HERMES_FALLBACK_PROVIDER: openai
+      HERMES_FALLBACK_BASE_URL: http://nexusmind_nexusmind:8080/v1
+      # HERMES_FALLBACK_API_KEY: <configurado na seção de secrets do Portainer>
+
+      # ---------------------------------------------------------------------------
+      # Plataforma e Infraestrutura
+      # ---------------------------------------------------------------------------
+      MCP_INTERNAL_JWT_SECRET: cortexx_dev_memory_internal_secret_2026
+      TENANT_ID: 00000000-0000-0000-0000-000000000000
+      AGENT_ID: 00000000-0000-0000-0000-000000000001
+      GRAPHITI_MCP_URL: http://cortexx-graphiti-mcp:8091/mcp/
+      DEVMEMORY_MCP_URL: http://cortexx-devmemory-mcp:8090
+      PAPERCLIP_API_URL: https://paperclip.cortexx.online
+      # PAPERCLIP_API_KEY: <configurado na seção de secrets do Portainer>
+
+      # ---------------------------------------------------------------------------
+      # Whisper Speech-To-Text (porta corrigida para 8000)
+      # ATENÇÃO: porta 8000 (fedirz/faster-whisper-server), NÃO 9000 (container antigo descontinuado)
+      # ATENÇÃO: modelo deve ser Systran/faster-whisper-base (pré-baixado offline no volume)
+      # ---------------------------------------------------------------------------
+      STT_PROVIDER: openai
+      STT_OPENAI_BASE_URL: http://cortexx-whisper_whisper:8000/v1
+      STT_OPENAI_MODEL: Systran/faster-whisper-base
+      # VOICE_TOOLS_OPENAI_KEY: <mesma chave do NexusMind>
+
+      # ---------------------------------------------------------------------------
+      # Busca Local e Vector Storage
+      # ---------------------------------------------------------------------------
+      SEARXNG_URL: http://cortexx-searxng_searxng:8080
+      QDRANT_URL: http://cortexx-qdrant_qdrant:6333
+
+      # ---------------------------------------------------------------------------
+      # Superpoderes Corporativos v6 — Ecossistema de Automação
+      # ---------------------------------------------------------------------------
+      MINIO_ENDPOINT: http://minio_minio:9000
+      MINIO_BUCKET: hermes-artifacts
+      # MINIO_ACCESS_KEY: <configurado na seção de secrets do Portainer>
+      # MINIO_SECRET_KEY: <configurado na seção de secrets do Portainer>
+      NOCODB_URL: http://nocodb_nocodb:8080
+      WUZAPI_URL: http://wuzapi-cortexx_wuzapi-cortexx:8089
+      N8N_URL: http://n8n_editor_n8n_editor:5678
+
+    volumes:
+      - hermes-data:/opt/data
+      - hermes-workspace:/workspace
+    networks:
+      - network_public
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 10s
+        max_attempts: 0
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        reservations:
+          # IMPORTANTE: Mantenha reservas baixas para evitar erro "insufficient resources"
+          cpus: "0.1"
+          memory: 256M
+        limits:
+          cpus: "4.0"
+          memory: 8192M
+
+volumes:
+  hermes-data:
+  hermes-workspace:
+
+networks:
+  network_public:
+    external: true
+    name: network_public
